@@ -1,0 +1,7 @@
+packages:
+  - frontend
+  - api
+  - brain
+  - shared
+  - evals
+  - "workflows/*"

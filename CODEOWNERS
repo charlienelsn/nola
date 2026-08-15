@@ -1,0 +1,7 @@
+# Founder-only paths (plan section 15). PRs touching these require this review.
+/brain/            @charlienelsn
+/shared/           @charlienelsn
+/workflows/**/schema*   @charlienelsn
+/workflows/**/validate* @charlienelsn
+/CLAUDE.md         @charlienelsn
+/docs/             @charlienelsn

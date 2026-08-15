@@ -30,3 +30,5 @@ Each entry: decision, reversibility.
 13. No real member data until the clinical entity and counsel sign-off exist;
     all autonomy resets to L1 when real members arrive — one-way until
     counsel says otherwise.
+14. Codify agent ships at L1 of our own autonomy ladder — auto-PR, human
+    merge; promotion considered after a month of clean PRs — reversible.

@@ -29,3 +29,8 @@ coverage/
 *.log
 npm-debug.log*
 pnpm-debug.log*
+
+# Codify pipeline state (per-machine, never committed)
+.claude/codify-queue
+.claude/codify.lock
+.claude/codify.log

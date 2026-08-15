@@ -63,6 +63,10 @@ Build Strategy & Technical Plan (Drive); decisions live in `docs/decisions.md`.
 - PRs: what changed, eval delta, screenshot. Small and daily beats large and
   weekly.
 
+## Codification
+
+Codification is autonomous via SessionEnd→queue→PR; merge gate is human. Manual: /codify.
+
 ## Mistakes log
 
 Append entries here whenever an agent gets something wrong, so the next

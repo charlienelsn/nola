@@ -44,7 +44,10 @@ Build Strategy & Technical Plan (Drive); decisions live in `docs/decisions.md`.
 - `pnpm dev` — frontend (5173) + API (3001)
 - `pnpm typecheck` / `pnpm lint` / `pnpm test`
 - `pnpm check:terminology` — the member-terminology grep
-- `pnpm seed` — synthetic members (lands Day 2 with Supabase)
+- `supabase start` — local stack (API 54341, DB 54342, Studio 54343; nonstandard ports to coexist with other local stacks)
+- `supabase stop` — stop the local stack
+- `pnpm seed` — deterministic synthetic members (wipes seeded tables, re-inserts; same output every run)
+- `pnpm reset` — rebuild schema via `supabase db reset`, then seed
 
 ## Conventions
 
@@ -72,4 +75,7 @@ Codification is autonomous via SessionEnd→queue→PR; merge gate is human. Man
 Append entries here whenever an agent gets something wrong, so the next
 session does not repeat it.
 
-- (empty)
+- `supabase db reset` fails mid-recreate ("connection reset by peer") if the
+  dev API holds open DB connections — stop `pnpm dev` before `pnpm reset`.
+  Also: piping a command through `tail` masks its exit code; the failure went
+  unnoticed for a full cycle.

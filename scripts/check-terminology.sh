@@ -5,6 +5,7 @@
 set -euo pipefail
 MATCHES=$(grep -rniE '\bpatients?\b' \
   frontend/src api/src brain/src shared/src evals/src workflows \
+  supabase/migrations \
   --exclude-dir=node_modules \
   --exclude-dir=fixtures \
   --exclude-dir=goldens \

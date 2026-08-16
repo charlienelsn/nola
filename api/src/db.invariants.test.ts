@@ -5,7 +5,8 @@
  *
  * These run against a real Postgres with the migrations applied (local
  * Supabase or the CI service container). Without a reachable database they
- * skip locally and fail in CI.
+ * skip — except where REQUIRE_DB is set (the seed-and-smoke job), which
+ * provisions one and so must fail loudly rather than skip silently.
  */
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -21,8 +22,12 @@ const dbUp = await pool
   .query("select 1")
   .then(() => true)
   .catch(() => false);
-if (!dbUp && process.env.CI) {
-  throw new Error(`CI requires a reachable database at ${DATABASE_URL}`);
+// Not process.env.CI: that is true in every CI job, including ones with no
+// database, where skipping is the correct behavior.
+if (!dbUp && process.env.REQUIRE_DB) {
+  throw new Error(
+    `REQUIRE_DB is set but no database is reachable at ${DATABASE_URL}`,
+  );
 }
 
 const insertFact = async (

@@ -56,7 +56,9 @@ jobs:
       - name: Seed synthetic members
         run: pnpm seed
       - name: Database invariant tests (forward-only, cannot-overwrite-verified)
-        run: pnpm --filter @nola/api test
+        # REQUIRE_DB turns an unreachable database into a failure here, so the
+        # invariant tests can never pass by silently skipping.
+        run: REQUIRE_DB=1 pnpm --filter @nola/api test
       - name: Boot API and smoke-test the contract
         run: |
           pnpm --filter @nola/api start &

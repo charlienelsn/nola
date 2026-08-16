@@ -30,6 +30,10 @@ coverage/
 npm-debug.log*
 pnpm-debug.log*
 
+# Supabase local stack state
+supabase/.temp/
+supabase/.branches/
+
 # Codify pipeline state (per-machine, never committed)
 .claude/codify-queue
 .claude/codify.lock

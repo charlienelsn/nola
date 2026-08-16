@@ -1,0 +1,32 @@
+# Eval regression gate (plan section 11). Placeholder until the harness lands
+# with workflow #1: runs the eval runner, which currently reports no goldens.
+name: Eval regression
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "brain/**"
+      - "shared/**"
+      - "workflows/**"
+      - "evals/**"
+  pull_request:
+    paths:
+      - "brain/**"
+      - "shared/**"
+      - "workflows/**"
+      - "evals/**"
+
+jobs:
+  eval-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run eval regression
+        run: pnpm --filter @nola/evals exec tsx src/run.ts

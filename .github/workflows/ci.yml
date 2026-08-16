@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      # Database invariant tests skip here (no database); seed-and-smoke runs them.
+      - run: pnpm test
+      - run: pnpm check:terminology
+      - run: bash scripts/check-claudemd-budget.sh
+
+  seed-and-smoke:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 54342:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54342/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply migrations
+        run: |
+          for f in supabase/migrations/*.sql; do
+            echo "applying $f"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+      - name: Seed synthetic members
+        run: pnpm seed
+      - name: Database invariant tests (forward-only, cannot-overwrite-verified)
+        # REQUIRE_DB turns an unreachable database into a failure here, so the
+        # invariant tests can never pass by silently skipping.
+        run: REQUIRE_DB=1 pnpm --filter @nola/api test
+      - name: Boot API and smoke-test the contract
+        run: |
+          pnpm --filter @nola/api start &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3001/health > /dev/null && break
+            sleep 1
+          done
+          members=$(curl -sf http://localhost:3001/members)
+          count=$(echo "$members" | jq 'length')
+          [ "$count" = "5" ] || { echo "expected 5 members, got $count"; exit 1; }
+          id=$(echo "$members" | jq -r '.[0].id')
+          state=$(curl -sf "http://localhost:3001/members/$id/state")
+          facts=$(echo "$state" | jq '.facts | length')
+          statuses=$(echo "$state" | jq -r '[.facts[].status] | unique | join(",")')
+          [ "$facts" -gt 0 ] || { echo "expected verified facts, got none"; exit 1; }
+          [ "$statuses" = "verified" ] || { echo "non-verified fact leaked: $statuses"; exit 1; }
+          echo "smoke ok: $count members, $facts verified facts for member $id"

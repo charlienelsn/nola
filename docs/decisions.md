@@ -32,3 +32,8 @@ Each entry: decision, reversibility.
     counsel says otherwise.
 14. Codify agent ships at L1 of our own autonomy ladder — auto-PR, human
     merge; promotion considered after a month of clean PRs — reversible.
+15. Member population profile (docs/member-population.md) is the source of
+    truth for all synthetic generation and golden cases; demographic
+    attributes are self-reported facts with provenance and are excluded from
+    escalation/autonomy inputs; parity across language and demographics
+    becomes an eval dimension when the harness lands — policy.

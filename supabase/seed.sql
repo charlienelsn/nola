@@ -1,0 +1,2 @@
+-- Intentionally empty. Seeding is code, not SQL: `pnpm seed` runs the
+-- deterministic synthetic seed in api/src/seed.ts (plan section 8).

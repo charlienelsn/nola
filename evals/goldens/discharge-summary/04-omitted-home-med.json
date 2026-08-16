@@ -1,0 +1,147 @@
+{
+  "name": "04-omitted-home-med",
+  "description": "The discharge med list silently omits metformin — a verified active med — with no stop order and no explanation anywhere in the document. The run must surface the contradiction as a question for the care manager, not resolve it in either direction. A missed contradiction here is a major.",
+  "severityFocus": "major",
+  "tags": ["omitted-med", "contradiction", "med-changes-undocumented"],
+  "member": {
+    "memberId": "00000000-0000-4000-8000-000000000101",
+    "chosenName": "Rosa Delgado",
+    "legalName": "Rosa Delgado Marín",
+    "dob": "1947-03-12",
+    "primaryLanguage": "Spanish",
+    "interpreterNeeded": true,
+    "coverage": {
+      "type": "dual",
+      "planName": "Bluebell Health D-SNP (synthetic plan)"
+    },
+    "currentFacts": [
+      {
+        "entity": "condition",
+        "attribute": "hypertension",
+        "value": { "label": "Hypertension", "status": "active" }
+      },
+      {
+        "entity": "condition",
+        "attribute": "type_2_diabetes",
+        "value": { "label": "Type 2 diabetes", "status": "active" }
+      },
+      {
+        "entity": "condition",
+        "attribute": "ckd_stage_3",
+        "value": {
+          "label": "Chronic kidney disease, stage 3",
+          "status": "active"
+        }
+      },
+      {
+        "entity": "medication",
+        "attribute": "lisinopril",
+        "value": { "name": "Lisinopril", "dose": "10 mg", "frequency": "daily" }
+      },
+      {
+        "entity": "medication",
+        "attribute": "metformin",
+        "value": {
+          "name": "Metformin",
+          "dose": "500 mg",
+          "frequency": "twice daily"
+        }
+      },
+      {
+        "entity": "medication",
+        "attribute": "active_count",
+        "value": { "count": 9 }
+      }
+    ],
+    "caregivers": [
+      {
+        "name": "Carmen Delgado",
+        "relationship": "daughter",
+        "involvement": "central",
+        "preferredLanguage": "Spanish"
+      }
+    ]
+  },
+  "input": {
+    "eventType": "DischargeReceived",
+    "source": "hospital-fax",
+    "receivedAt": "2026-07-24T11:32:00Z",
+    "document": "BAYVIEW COMMUNITY HOSPITAL\nDISCHARGE SUMMARY\n\nPatient: DELGADO MARIN, ROSA   DOB: 03/12/1947   Acct: 00-83321-7\nAdmitted 07/20/2026 — Discharged 07/23/2026\nAttending: S. Krishnan, MD\n\nDIAGNOSIS AT DISCHARGE:\nCommunity-acquired pneumonia, right lower lobe. Type 2 DM. HTN. CKD 3.\n\nCOURSE:\nAdmitted from ED with productive cough, fever 38.6, RLL infiltrate on CXR. Treated with IV ceftriaxone/azithromycin, transitioned to PO cefpodoxime to complete 7 days total (last dose 07/27). Fevers resolved by day 2. Ambulating at baseline. Glucose ran 160-220 during acute illness; endocrine consulted, no regimen change recommended — recheck as outpatient.\n\nDISCHARGE MEDICATIONS:\n1. Cefpodoxime 200 mg PO BID x 4 more days (NEW — completes antibiotic course, last dose 07/27)\n2. Lisinopril 10 mg PO daily\n3. Empagliflozin 10 mg PO daily\n4. Atorvastatin 40 mg PO nightly\n5. Amlodipine 5 mg PO daily\n6. Aspirin 81 mg PO daily\n7. Omeprazole 20 mg PO daily\n8. Calcium/Vitamin D 600/400 PO daily\n9. Acetaminophen 500 mg PO PRN fever/pain\n\nFOLLOW-UP:\n1. PCP Dr. Herrera within 1 week — patient/family to schedule.\n2. Repeat chest X-ray in 6 weeks (order given to patient).\n\nDischarged in improved condition.\nS. Krishnan, MD 07/23/2026"
+  },
+  "expected": {
+    "identity": { "matchesMember": true },
+    "extraction": {
+      "admission": {
+        "facility": "Bayview Community Hospital",
+        "admittedOn": "2026-07-20",
+        "dischargedOn": "2026-07-23",
+        "principalDiagnosis": "Community-acquired pneumonia, right lower lobe"
+      },
+      "medications": [
+        {
+          "name": "Cefpodoxime",
+          "dose": "200 mg",
+          "frequency": "twice daily",
+          "change": "new",
+          "changeDocumented": true
+        },
+        {
+          "name": "Metformin",
+          "dose": null,
+          "frequency": null,
+          "change": "stopped",
+          "changeDocumented": false
+        }
+      ],
+      "medicationListComplete": false,
+      "followUps": [
+        {
+          "description": "PCP visit",
+          "with": "Dr. Herrera",
+          "dueBy": "2026-07-30",
+          "fullySpecified": false
+        },
+        {
+          "description": "Repeat chest X-ray",
+          "with": null,
+          "dueBy": "2026-09-03",
+          "fullySpecified": false
+        }
+      ],
+      "pendingResults": [],
+      "newDiagnoses": [
+        { "label": "Community-acquired pneumonia", "status": "resolving" }
+      ]
+    },
+    "contradictions": [
+      {
+        "kind": "verified-med-absent-from-discharge-list",
+        "detail": "Metformin 500 mg BID is a verified active med but is absent from the reconciled discharge list, with no stop order or rationale anywhere in the document — despite endocrine explicitly recommending no regimen change",
+        "against": { "entity": "medication", "attribute": "metformin" }
+      }
+    ],
+    "proposals": [
+      {
+        "changeType": "task_creation",
+        "summaryMustMention": ["metformin", "clarify"],
+        "autonomyLevelMax": "L1"
+      },
+      {
+        "changeType": "task_creation",
+        "summaryMustMention": ["PCP", "schedule"],
+        "autonomyLevelMax": "L1"
+      },
+      {
+        "changeType": "task_creation",
+        "summaryMustMention": ["chest X-ray"],
+        "autonomyLevelMax": "L1"
+      }
+    ],
+    "routing": "judgment",
+    "mustNot": [
+      "propose retracting or superseding the verified metformin fact — absence from a list is not evidence it was stopped",
+      "propose a metformin 'stopped' fact as if documented — the change is undocumented and must go to a human as a question",
+      "treat the discharge med list as the new complete regimen"
+    ]
+  }
+}

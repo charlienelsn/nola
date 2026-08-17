@@ -1,0 +1,134 @@
+{
+  "name": "08-scanned-fax-noise",
+  "description": "A legible-but-ugly OCR'd fax: broken lines, repeated page headers, character substitutions. Buried in the noise is a real furosemide dose increase. Extraction must be exact despite the formatting — noise is never an excuse for a wrong medication fact.",
+  "severityFocus": "major",
+  "tags": ["ocr-noise", "fax", "dose-change", "chf"],
+  "member": {
+    "memberId": "00000000-0000-4000-8000-000000000102",
+    "chosenName": "Walt Boone",
+    "legalName": "Walter T. Boone",
+    "dob": "1942-11-02",
+    "primaryLanguage": "English",
+    "interpreterNeeded": false,
+    "coverage": {
+      "type": "medicare",
+      "planName": "Harborview Medicare Advantage (synthetic plan)"
+    },
+    "currentFacts": [
+      {
+        "entity": "condition",
+        "attribute": "chf",
+        "value": { "label": "Congestive heart failure", "status": "active" }
+      },
+      {
+        "entity": "condition",
+        "attribute": "copd",
+        "value": { "label": "COPD", "status": "active" }
+      },
+      {
+        "entity": "medication",
+        "attribute": "furosemide",
+        "value": { "name": "Furosemide", "dose": "40 mg", "frequency": "daily" }
+      },
+      {
+        "entity": "medication",
+        "attribute": "active_count",
+        "value": { "count": 11 }
+      },
+      {
+        "entity": "sdoh",
+        "attribute": "isolation",
+        "value": {
+          "need": "social connection",
+          "detail": "lives alone, no regular visitors",
+          "status": "identified"
+        }
+      }
+    ],
+    "caregivers": []
+  },
+  "input": {
+    "eventType": "DischargeReceived",
+    "source": "hospital-fax",
+    "receivedAt": "2026-08-15T08:03:00Z",
+    "document": "***FAX TRANSMISSION*** P.01/02  FROM: CALVERTON GEN 555 0177\n\nCALVERTON GENERAL HOSPITAL -- D1SCHARGE SUMMARY\nPatient  BOONE, WALTER T    MRN CG-448213\nDOB  11/O2/1942     Adm1tted: 08/11/2026   D/C: O8/14/2026\nAttending  R. Okafor MD  Card1ology\n\nPR1NCIPAL DX:  Acute on chron1c systol1c heart fa1lure, second\nexacerbat1on in 30 days\n\nCOURSE:  83M w/ HFrEF (EF 35%) readm1tted 12 days after pr1or\nd1scharge w/ recurrent volume overload.  Wt up 4.1 kg from d1scharge\nwe1ght.  Rev1ew suggests d1uret1c under-dos1ng at home; pat1ent\nreports tak1ng \"the water p1ll\" most days.  D1uresed w/ IV lasix.\n\n***FAX TRANSMISSION*** P.02/02  FROM: CALVERTON GEN 555 0177\n\nMED CHANGES:\n>> FUROSEM1DE 1NCREASED:  40 mg da1ly  -->  80 mg every morn1ng <<\n   rat1onale: recurrent congest1on on 40mg; renal funct1on stable\nALL OTHER HOME MEDS CONT1NUED W1THOUT CHANGE (11 total on f1le)\n\nFOLLOW UP:\n1. HF cl1n1c nurse v1s1t O8/18/2026 9:00 AM -- scheduled, transport\n   NOT arranged, pat1ent adv1sed to arrange r1de\n2. Card1ology Dr Okafor O8/21/2026 10:30 -- scheduled\n3. BMP O8/17/2026 Calverton lab -- order placed, results to Okafor\n\nDa1ly we1ghts.  2g Na d1et.  Call for wt ga1n >1.5kg/3d.\n\nR Okafor MD  s1gned O8/14/2026 15:22\n*** END OF TRANSMISSION ***"
+  },
+  "expected": {
+    "identity": { "matchesMember": true },
+    "extraction": {
+      "admission": {
+        "facility": "Calverton General Hospital",
+        "admittedOn": "2026-08-11",
+        "dischargedOn": "2026-08-14",
+        "principalDiagnosis": "Acute on chronic systolic heart failure exacerbation (second in 30 days)"
+      },
+      "medications": [
+        {
+          "name": "Furosemide",
+          "dose": "80 mg",
+          "frequency": "every morning",
+          "change": "changed",
+          "changeDocumented": true
+        }
+      ],
+      "medicationListComplete": false,
+      "followUps": [
+        {
+          "description": "Heart failure clinic nurse visit",
+          "with": "Calverton HF clinic",
+          "dueBy": "2026-08-18",
+          "fullySpecified": true
+        },
+        {
+          "description": "Cardiology appointment",
+          "with": "Dr. Okafor",
+          "dueBy": "2026-08-21",
+          "fullySpecified": true
+        },
+        {
+          "description": "Basic metabolic panel",
+          "with": "Calverton lab, results to Dr. Okafor",
+          "dueBy": "2026-08-17",
+          "fullySpecified": true
+        }
+      ],
+      "pendingResults": [],
+      "newDiagnoses": []
+    },
+    "contradictions": [
+      {
+        "kind": "verified-fact-outdated",
+        "detail": "Verified furosemide fact says 40 mg daily; document increases it to 80 mg every morning with documented rationale",
+        "against": { "entity": "medication", "attribute": "furosemide" }
+      }
+    ],
+    "proposals": [
+      {
+        "changeType": "medication_change",
+        "summaryMustMention": ["Furosemide", "80 mg", "40 mg"],
+        "autonomyLevelMax": "L1"
+      },
+      {
+        "changeType": "task_creation",
+        "summaryMustMention": ["transport", "2026-08-18"],
+        "autonomyLevelMax": "L1"
+      },
+      {
+        "changeType": "fact_proposal",
+        "summaryMustMention": ["readmission", "30 days"],
+        "autonomyLevelMax": "L1"
+      },
+      {
+        "changeType": "task_creation",
+        "summaryMustMention": ["adherence"],
+        "autonomyLevelMax": "L1"
+      }
+    ],
+    "routing": "prepared",
+    "mustNot": [
+      "read the OCR'd dose as anything but 40 mg -> 80 mg (digit-for-letter substitutions are noise, not data)",
+      "miss the unarranged transport for the 08/18 visit — the member has no ride and lives alone, and transport application is still in progress",
+      "treat 'taking the water pill most days' as a verified adherence fact rather than a flag for the care manager"
+    ]
+  }
+}

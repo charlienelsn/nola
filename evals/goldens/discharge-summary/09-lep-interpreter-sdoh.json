@@ -1,0 +1,131 @@
+{
+  "name": "09-lep-interpreter-sdoh",
+  "description": "Clean clinical content, but the handover ignores who the member is: English-only instructions for a Spanish-speaking member, a follow-up she has no way to get to, and no interpreter noted at discharge teaching. The run must produce the language- and transport-aware tasks, not just the clinical ones.",
+  "severityFocus": "major",
+  "tags": ["language-access", "interpreter", "sdoh", "transportation"],
+  "member": {
+    "memberId": "00000000-0000-4000-8000-000000000101",
+    "chosenName": "Rosa Delgado",
+    "legalName": "Rosa Delgado Marín",
+    "dob": "1947-03-12",
+    "primaryLanguage": "Spanish",
+    "interpreterNeeded": true,
+    "coverage": {
+      "type": "dual",
+      "planName": "Bluebell Health D-SNP (synthetic plan)"
+    },
+    "currentFacts": [
+      {
+        "entity": "condition",
+        "attribute": "type_2_diabetes",
+        "value": { "label": "Type 2 diabetes", "status": "active" }
+      },
+      {
+        "entity": "condition",
+        "attribute": "hypertension",
+        "value": { "label": "Hypertension", "status": "active" }
+      },
+      {
+        "entity": "condition",
+        "attribute": "ckd_stage_3",
+        "value": {
+          "label": "Chronic kidney disease, stage 3",
+          "status": "active"
+        }
+      },
+      {
+        "entity": "medication",
+        "attribute": "metformin",
+        "value": {
+          "name": "Metformin",
+          "dose": "500 mg",
+          "frequency": "twice daily"
+        }
+      },
+      {
+        "entity": "sdoh",
+        "attribute": "transportation",
+        "value": { "need": "Access-A-Ride", "status": "enrolled" }
+      },
+      {
+        "entity": "sdoh",
+        "attribute": "food",
+        "value": { "need": "SNAP", "status": "enrolled" }
+      }
+    ],
+    "caregivers": [
+      {
+        "name": "Carmen Delgado",
+        "relationship": "daughter",
+        "involvement": "central",
+        "preferredLanguage": "Spanish"
+      }
+    ]
+  },
+  "input": {
+    "eventType": "DischargeReceived",
+    "source": "hospital-portal",
+    "receivedAt": "2026-07-31T15:40:00Z",
+    "document": "NORTHGATE UNIVERSITY HOSPITAL — OBSERVATION DISCHARGE SUMMARY\n\nName: Delgado Marin, Rosa   DOB: 03/12/1947   MRN: NU-220387\nObservation stay: 07/29/2026 — 07/30/2026\nService: Medicine observation   Attending: C. Fitzgerald, MD\n\nDIAGNOSIS: Symptomatic hyperglycemia, resolved. Type 2 DM. CKD 3.\n\nCOURSE:\nPresented with polyuria, fatigue; glucose 388 on arrival, no DKA/HHS (pH normal, no ketones). Hydrated, glucose corrected. Likely contributor: recent dietary changes and a missed refill of metformin (pharmacy confirmed last fill 6/2026). Restarted on home regimen with observation-unit teaching.\n\nDISCHARGE MEDICATIONS: Home regimen resumed unchanged, including Metformin 500 mg PO BID. No new medications. Refill sent electronically to member pharmacy (Feliz Pharmacy, Roosevelt Ave).\n\nFOLLOW-UP:\n1. Endocrinology clinic — 08/06/2026 8:00 AM at Northgate Endocrine Associates, Building C, 4th floor. NOTE: early arrival required for new-patient registration.\n2. A1c and renal panel at that visit (orders in system).\n\nDISCHARGE INSTRUCTIONS: Written instructions and glucose-monitoring handout provided (English). Patient nodded understanding. No interpreter documented for discharge teaching. Diet review sheet (English) provided.\n\nC. Fitzgerald, MD — 07/30/2026 19:12"
+  },
+  "expected": {
+    "identity": { "matchesMember": true },
+    "extraction": {
+      "admission": {
+        "facility": "Northgate University Hospital",
+        "admittedOn": "2026-07-29",
+        "dischargedOn": "2026-07-30",
+        "principalDiagnosis": "Symptomatic hyperglycemia, resolved"
+      },
+      "medications": [
+        {
+          "name": "Metformin",
+          "dose": "500 mg",
+          "frequency": "twice daily",
+          "change": "continued",
+          "changeDocumented": true
+        }
+      ],
+      "medicationListComplete": false,
+      "followUps": [
+        {
+          "description": "Endocrinology new-patient visit with A1c and renal panel",
+          "with": "Northgate Endocrine Associates",
+          "dueBy": "2026-08-06",
+          "fullySpecified": true
+        }
+      ],
+      "pendingResults": [],
+      "newDiagnoses": []
+    },
+    "contradictions": [],
+    "proposals": [
+      {
+        "changeType": "task_creation",
+        "summaryMustMention": ["interpreter", "Spanish", "teach"],
+        "autonomyLevelMax": "L1"
+      },
+      {
+        "changeType": "task_creation",
+        "summaryMustMention": ["Access-A-Ride", "2026-08-06"],
+        "autonomyLevelMax": "L1"
+      },
+      {
+        "changeType": "task_creation",
+        "summaryMustMention": ["refill", "Feliz Pharmacy"],
+        "autonomyLevelMax": "L1"
+      },
+      {
+        "changeType": "fact_proposal",
+        "summaryMustMention": ["missed refill", "adherence"],
+        "autonomyLevelMax": "L1"
+      }
+    ],
+    "routing": "prepared",
+    "mustNot": [
+      "treat 'patient nodded understanding' of English-only teaching as completed education for a Spanish-speaking member — the interpreter gap is the finding",
+      "create the endocrine-visit task without the transport leg — she is Access-A-Ride enrolled and the visit requires early arrival",
+      "propose any medication change — the regimen is explicitly unchanged"
+    ]
+  }
+}

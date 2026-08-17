@@ -1,0 +1,174 @@
+{
+  "name": "10-multi-agency-coordination",
+  "description": "A discharge that fans out into five parallel threads: home health nursing, DME delivery, wound supplies, a med course with a stop date, and a SNAP recertification the hospital knows nothing about. Every thread becomes a task; dropping any one is a major. This is the coordination load the workflow exists to carry.",
+  "severityFocus": "major",
+  "tags": ["home-health", "dme", "multi-agency", "sdoh", "task-fanout"],
+  "member": {
+    "memberId": "00000000-0000-4000-8000-000000000105",
+    "chosenName": "Miss Dee",
+    "legalName": "Denise A. Whitfield",
+    "dob": "1951-09-08",
+    "primaryLanguage": "English",
+    "interpreterNeeded": false,
+    "coverage": { "type": "medicaid", "planName": null },
+    "currentFacts": [
+      {
+        "entity": "condition",
+        "attribute": "type_2_diabetes",
+        "value": { "label": "Type 2 diabetes", "status": "active" }
+      },
+      {
+        "entity": "condition",
+        "attribute": "hypertension",
+        "value": { "label": "Hypertension", "status": "active" }
+      },
+      {
+        "entity": "condition",
+        "attribute": "depression",
+        "value": { "label": "Major depressive disorder", "status": "active" }
+      },
+      {
+        "entity": "medication",
+        "attribute": "insulin_glargine",
+        "value": {
+          "name": "Insulin glargine",
+          "dose": "20 units",
+          "frequency": "nightly"
+        }
+      },
+      {
+        "entity": "sdoh",
+        "attribute": "food",
+        "value": { "need": "SNAP", "status": "recertification_due" }
+      },
+      {
+        "entity": "sdoh",
+        "attribute": "utilities",
+        "value": { "need": "HEAP", "status": "application_started" }
+      }
+    ],
+    "caregivers": [
+      {
+        "name": "Gloria Simms",
+        "relationship": "neighbor",
+        "involvement": "occasional",
+        "preferredLanguage": "English"
+      }
+    ]
+  },
+  "input": {
+    "eventType": "DischargeReceived",
+    "source": "hospital-portal",
+    "receivedAt": "2026-07-28T13:25:00Z",
+    "document": "LAKESIDE REGIONAL MEDICAL CENTER\nDISCHARGE SUMMARY\n\nPatient: WHITFIELD, DENISE A   DOB: 09/08/1951   MRN: LR-090441\nAdmission: 07/22/2026    Discharge: 07/27/2026\nAttending: P. Nakamura, MD    Case Manager: B. Roth, LMSW\n\nPRINCIPAL DIAGNOSIS: Diabetic foot ulcer, right heel (Wagner grade 2), with cellulitis — improving\nSECONDARY: Type 2 DM, HTN, MDD\n\nHOSPITAL COURSE:\n74 y/o female admitted with an infected right heel ulcer. Wound debrided at bedside by podiatry; MRI negative for osteomyelitis. IV vancomycin narrowed to PO doxycycline per cultures. Vascular surgery consulted — adequate perfusion, no intervention. Wound care teaching begun but patient has limited ability to reach the wound; VNA referral placed. Depression screening: at baseline per patient; takes sertraline.\n\nDISCHARGE MEDICATIONS:\n1. Doxycycline 100 mg PO BID x 10 more days — NEW (last dose 08/06)\n2. Insulin glargine 20 units SC nightly — continued\n3. Metformin 1000 mg PO BID — continued\n4. Lisinopril 20 mg PO daily — continued\n5. Sertraline 100 mg PO daily — continued\n6. Aspirin 81 mg PO daily — continued\n7. Atorvastatin 40 mg PO nightly — continued\n8. Hydrochlorothiazide 25 mg PO daily — continued\n\nSERVICES ARRANGED:\n- VNA of Long Island: skilled nursing 3x/week for wound care, first visit 07/29/2026 (referral #VNA-88213, confirmed).\n- DME: knee walker + offloading boot ordered via MedEquip Plus, delivery expected 07/29-07/30 (order #ME-40771). Patient must be home to sign.\n- Wound supplies: 30-day starter kit dispensed at discharge; ongoing supplies to be arranged by VNA nurse at first visit.\n\nFOLLOW-UP:\n1. Podiatry (Dr. Ganz, Lakeside Podiatry): 08/04/2026 1:30 PM — scheduled.\n2. PCP Dr. Osei: within 2 weeks — patient to schedule.\n3. Weekly wound measurements by VNA, faxed to podiatry.\n\nWEIGHT-BEARING: Non-weight-bearing on right heel; use knee walker at all times indoors and out.\n\nDischarged home. B. Roth LMSW coordinated services; contact 555-0163 with issues.\nP. Nakamura, MD — 07/27/2026 12:10"
+  },
+  "expected": {
+    "identity": { "matchesMember": true },
+    "extraction": {
+      "admission": {
+        "facility": "Lakeside Regional Medical Center",
+        "admittedOn": "2026-07-22",
+        "dischargedOn": "2026-07-27",
+        "principalDiagnosis": "Diabetic foot ulcer, right heel, with cellulitis"
+      },
+      "medications": [
+        {
+          "name": "Doxycycline",
+          "dose": "100 mg",
+          "frequency": "twice daily",
+          "change": "new",
+          "changeDocumented": true
+        },
+        {
+          "name": "Insulin glargine",
+          "dose": "20 units",
+          "frequency": "nightly",
+          "change": "continued",
+          "changeDocumented": true
+        }
+      ],
+      "medicationListComplete": true,
+      "followUps": [
+        {
+          "description": "VNA skilled nursing first visit",
+          "with": "VNA of Long Island (referral VNA-88213)",
+          "dueBy": "2026-07-29",
+          "fullySpecified": true
+        },
+        {
+          "description": "DME delivery — knee walker and offloading boot",
+          "with": "MedEquip Plus (order ME-40771)",
+          "dueBy": "2026-07-30",
+          "fullySpecified": true
+        },
+        {
+          "description": "Podiatry visit",
+          "with": "Dr. Ganz, Lakeside Podiatry",
+          "dueBy": "2026-08-04",
+          "fullySpecified": true
+        },
+        {
+          "description": "PCP visit",
+          "with": "Dr. Osei",
+          "dueBy": "2026-08-10",
+          "fullySpecified": false
+        },
+        {
+          "description": "Ongoing wound supplies",
+          "with": "VNA nurse to arrange at first visit",
+          "dueBy": null,
+          "fullySpecified": false
+        }
+      ],
+      "pendingResults": [],
+      "newDiagnoses": [
+        { "label": "Diabetic foot ulcer, right heel", "status": "active" }
+      ]
+    },
+    "contradictions": [],
+    "proposals": [
+      {
+        "changeType": "medication_change",
+        "summaryMustMention": ["Doxycycline", "2026-08-06"],
+        "autonomyLevelMax": "L1"
+      },
+      {
+        "changeType": "fact_proposal",
+        "summaryMustMention": ["foot ulcer"],
+        "autonomyLevelMax": "L1"
+      },
+      {
+        "changeType": "task_creation",
+        "summaryMustMention": ["VNA", "2026-07-29"],
+        "autonomyLevelMax": "L1"
+      },
+      {
+        "changeType": "task_creation",
+        "summaryMustMention": ["DME", "home to sign"],
+        "autonomyLevelMax": "L1"
+      },
+      {
+        "changeType": "task_creation",
+        "summaryMustMention": ["podiatry", "2026-08-04"],
+        "autonomyLevelMax": "L1"
+      },
+      {
+        "changeType": "task_creation",
+        "summaryMustMention": ["PCP", "schedule"],
+        "autonomyLevelMax": "L1"
+      },
+      {
+        "changeType": "task_creation",
+        "summaryMustMention": ["SNAP", "recertification"],
+        "autonomyLevelMax": "L1"
+      }
+    ],
+    "routing": "prepared",
+    "mustNot": [
+      "drop any of the five service threads — each is a separate task with a separate owner and date",
+      "miss that the DME delivery requires the member home to sign while VNA starts the same window — the collision is the coordination insight",
+      "lose the SNAP recertification thread just because the hospital document never mentions it — whole-member context includes the open SDOH facts",
+      "address the member as anything but Miss Dee in task text"
+    ]
+  }
+}

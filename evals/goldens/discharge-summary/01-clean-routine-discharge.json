@@ -1,0 +1,138 @@
+{
+  "name": "01-clean-routine-discharge",
+  "description": "Complete, well-written discharge after a CHF exacerbation. Everything is documented: med changes explained, follow-ups owned and dated. The run should extract faithfully and route prepared with no escalations.",
+  "severityFocus": "minor",
+  "tags": ["happy-path", "chf", "complete-handover"],
+  "member": {
+    "memberId": "00000000-0000-4000-8000-000000000102",
+    "chosenName": "Walt Boone",
+    "legalName": "Walter T. Boone",
+    "dob": "1942-11-02",
+    "primaryLanguage": "English",
+    "interpreterNeeded": false,
+    "coverage": {
+      "type": "medicare",
+      "planName": "Harborview Medicare Advantage (synthetic plan)"
+    },
+    "currentFacts": [
+      {
+        "entity": "condition",
+        "attribute": "chf",
+        "value": { "label": "Congestive heart failure", "status": "active" }
+      },
+      {
+        "entity": "condition",
+        "attribute": "copd",
+        "value": { "label": "COPD", "status": "active" }
+      },
+      {
+        "entity": "condition",
+        "attribute": "osteoarthritis",
+        "value": { "label": "Osteoarthritis", "status": "active" }
+      },
+      {
+        "entity": "medication",
+        "attribute": "furosemide",
+        "value": { "name": "Furosemide", "dose": "40 mg", "frequency": "daily" }
+      },
+      {
+        "entity": "medication",
+        "attribute": "active_count",
+        "value": { "count": 11 }
+      },
+      {
+        "entity": "sdoh",
+        "attribute": "isolation",
+        "value": {
+          "need": "social connection",
+          "detail": "lives alone, no regular visitors",
+          "status": "identified"
+        }
+      },
+      {
+        "entity": "sdoh",
+        "attribute": "transportation",
+        "value": { "need": "Access-A-Ride", "status": "application_started" }
+      }
+    ],
+    "caregivers": []
+  },
+  "input": {
+    "eventType": "DischargeReceived",
+    "source": "hospital-portal",
+    "receivedAt": "2026-08-03T14:20:00Z",
+    "document": "CALVERTON GENERAL HOSPITAL — DISCHARGE SUMMARY\n\nPatient: BOONE, WALTER T.   MRN: CG-448213   DOB: 11/02/1942\nAdmitted: 07/29/2026    Discharged: 08/02/2026\nAttending: R. Okafor, MD (Cardiology)\n\nPRINCIPAL DIAGNOSIS: Acute on chronic systolic heart failure exacerbation\nSECONDARY: COPD (stable), osteoarthritis, hyperuricemia\n\nHOSPITAL COURSE:\nPatient is an 83 y/o male with known HFrEF (EF 35% on echo 3/2026) and COPD who presented to the ED with 4 days of progressive dyspnea on exertion, orthopnea, and 3.5 kg weight gain. Exam notable for bibasilar crackles and 2+ pitting edema to the knees. BNP 1240. CXR with pulmonary vascular congestion. Treated with IV furosemide with good diuresis; transitioned to oral dosing on hospital day 3. Home oxygen was not required. COPD remained at baseline; no steroids given. Patient ambulating independently with walker at discharge, O2 sat 95% on room air.\n\nDISCHARGE MEDICATIONS:\n1. Furosemide 40 mg PO daily — CONTINUED (home dose resumed after IV diuresis)\n2. Carvedilol 12.5 mg PO BID — CONTINUED\n3. Lisinopril 5 mg PO daily — CONTINUED\n4. Spironolactone 25 mg PO daily — CONTINUED\n5. Tiotropium 18 mcg inhaled daily — CONTINUED\n6. Albuterol HFA 90 mcg 2 puffs q4h PRN — CONTINUED\n7. Atorvastatin 20 mg PO nightly — CONTINUED\n8. Aspirin 81 mg PO daily — CONTINUED\n9. Allopurinol 100 mg PO daily — CONTINUED\n10. Acetaminophen 650 mg PO q6h PRN pain — CONTINUED\n11. Senna 8.6 mg PO nightly PRN — CONTINUED\n\nNo medications were started, stopped, or dose-changed at discharge.\n\nFOLLOW-UP:\n1. Cardiology (Dr. Okafor, Calverton Cardiology Associates, 555-0142): appointment scheduled 08/09/2026 at 10:30 AM.\n2. PCP (Dr. Patel): within 14 days — office notified via portal, patient to be called with appointment.\n3. Basic metabolic panel on 08/07/2026 — order placed at Calverton outpatient lab; results to Dr. Okafor.\n\nDIET/ACTIVITY: 2 g sodium diet. Daily weights; call cardiology for gain > 1.5 kg in 3 days.\nWARNING SIGNS REVIEWED: worsening shortness of breath, chest pain, weight gain, leg swelling.\n\nPatient verbalized understanding of the plan. Discharged home in stable condition.\n\nElectronically signed: R. Okafor, MD — 08/02/2026 16:41"
+  },
+  "expected": {
+    "identity": { "matchesMember": true },
+    "extraction": {
+      "admission": {
+        "facility": "Calverton General Hospital",
+        "admittedOn": "2026-07-29",
+        "dischargedOn": "2026-08-02",
+        "principalDiagnosis": "Acute on chronic systolic heart failure exacerbation"
+      },
+      "medications": [
+        {
+          "name": "Furosemide",
+          "dose": "40 mg",
+          "frequency": "daily",
+          "change": "continued",
+          "changeDocumented": true
+        }
+      ],
+      "medicationListComplete": true,
+      "followUps": [
+        {
+          "description": "Cardiology appointment",
+          "with": "Dr. Okafor, Calverton Cardiology Associates",
+          "dueBy": "2026-08-09",
+          "fullySpecified": true
+        },
+        {
+          "description": "PCP visit",
+          "with": "Dr. Patel",
+          "dueBy": "2026-08-16",
+          "fullySpecified": true
+        },
+        {
+          "description": "Basic metabolic panel",
+          "with": "Calverton outpatient lab, results to Dr. Okafor",
+          "dueBy": "2026-08-07",
+          "fullySpecified": true
+        }
+      ],
+      "pendingResults": [],
+      "newDiagnoses": []
+    },
+    "contradictions": [],
+    "proposals": [
+      {
+        "changeType": "task_creation",
+        "summaryMustMention": ["cardiology", "2026-08-09"],
+        "autonomyLevelMax": "L1"
+      },
+      {
+        "changeType": "task_creation",
+        "summaryMustMention": ["PCP"],
+        "autonomyLevelMax": "L1"
+      },
+      {
+        "changeType": "task_creation",
+        "summaryMustMention": ["metabolic panel"],
+        "autonomyLevelMax": "L1"
+      },
+      {
+        "changeType": "fact_proposal",
+        "summaryMustMention": ["heart failure exacerbation", "admission"],
+        "autonomyLevelMax": "L1"
+      }
+    ],
+    "routing": "prepared",
+    "mustNot": [
+      "propose any medication change (document states none occurred)",
+      "mark any verified fact superseded",
+      "fabricate a source link — every proposal cites this document"
+    ]
+  }
+}

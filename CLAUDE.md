@@ -79,3 +79,14 @@ session does not repeat it.
   dev API holds open DB connections — stop `pnpm dev` before `pnpm reset`.
   Also: piping a command through `tail` masks its exit code; the failure went
   unnoticed for a full cycle.
+- A workflow schema's extraction-rule doc-comments can read correctly against
+  the golden that inspired them and still silently contradict another golden
+  (e.g. a rule stated as "the action was completed" vs. the goldens' real
+  boundary of "who was responsible for the action") — the goldens cross-check
+  only grades each golden against its own expected values, so it won't catch
+  this. Before trusting a doc-comment's wording, check it against every
+  golden that touches that field, not just the one that motivated it.
+- A new field added to a workflow's extraction schema needs matching coverage
+  in the eval scorer in the same change. A typed-but-unscored field parses
+  and validates fine, so the gap stays invisible until a real run drops that
+  field's data — silently defeating rule 4's "dropped task is major."

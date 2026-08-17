@@ -238,6 +238,20 @@ export function scoreCase(golden: GoldenCase, result: RunResult): Finding[] {
         add("major", "missing-new-diagnosis", `"${dx.label}" not extracted`);
       }
     }
+
+    // A dropped pending result is a dropped task (severity rubric).
+    for (const pending of want.pendingResults) {
+      const found = got.pendingResults.find(
+        (p) => tokenOverlap(pending.description, p.description) >= 0.6,
+      );
+      if (!found) {
+        add(
+          "major",
+          "missing-pending-result",
+          `"${pending.description}" not extracted`,
+        );
+      }
+    }
   }
 
   // ---- contradictions: each expected one must be surfaced ----

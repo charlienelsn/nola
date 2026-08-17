@@ -66,16 +66,17 @@ if (resultsPath === undefined) {
   process.exit(0);
 }
 
-const ResultsFileSchema = z.record(z.string(), RunResultSchema);
+const ResultsFileSchema = z.record(z.string(), z.unknown());
 const results = ResultsFileSchema.parse(
   JSON.parse(readFileSync(resolve(resultsPath), "utf8")),
 );
 
 let missing = 0;
+let invalid = 0;
 const scores = all.flatMap((w) =>
   w.cases.map((golden) => {
-    const result = results[golden.name];
-    if (result === undefined) {
+    const raw = results[golden.name];
+    if (raw === undefined) {
       missing += 1;
       const finding: Finding = {
         caseName: golden.name,
@@ -85,7 +86,23 @@ const scores = all.flatMap((w) =>
       };
       return summarizeCase(golden, [finding]);
     }
-    return summarizeCase(golden, scoreCase(golden, result));
+    // A malformed result is a graded finding, never a thrown error: one bad
+    // entry must not take down the report for every other case.
+    const parsed = RunResultSchema.safeParse(raw);
+    if (!parsed.success) {
+      invalid += 1;
+      const issues = parsed.error.issues
+        .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+        .join("; ");
+      const finding: Finding = {
+        caseName: golden.name,
+        severity: "major",
+        code: "invalid-result",
+        detail: `result for ${w.workflow}/${golden.name} violates the run-result contract — ${issues}`,
+      };
+      return summarizeCase(golden, [finding]);
+    }
+    return summarizeCase(golden, scoreCase(golden, parsed.data));
   }),
 );
 
@@ -108,9 +125,13 @@ if (asJson) {
       console.log(`      [${f.severity}] ${f.code}: ${f.detail}`);
     }
   }
-  const missingNote = missing > 0 ? ` (${missing} missing results)` : "";
+  const notes = [
+    missing > 0 ? `${missing} missing results` : "",
+    invalid > 0 ? `${invalid} invalid results` : "",
+  ].filter(Boolean);
+  const noteSuffix = notes.length > 0 ? ` (${notes.join(", ")})` : "";
   console.log(
-    `\n${totals.passed}/${totals.cases} cases passed — ${totals.critical} critical, ${totals.major} major, ${totals.minor} minor${missingNote}`,
+    `\n${totals.passed}/${totals.cases} cases passed — ${totals.critical} critical, ${totals.major} major, ${totals.minor} minor${noteSuffix}`,
   );
   if (totals.critical > 0) {
     console.log(

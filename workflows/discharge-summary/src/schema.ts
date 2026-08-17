@@ -60,8 +60,9 @@ export const FollowUpSchema = z.object({
   dueBy: IsoDateSchema.nullable(),
   /**
    * True only when the thread is actionable as handed over: a named owner,
-   * a concrete date, and the arrangement actually made (appointment
-   * scheduled, order placed). "Member to schedule" is not fully specified
+   * a concrete date, and the facility carrying the arranging burden — an
+   * appointment scheduled, an order placed, or the office notified to reach
+   * out. False whenever arranging is left to the member or their family,
    * even when an owner and window are named.
    */
   fullySpecified: z.boolean(),
@@ -70,9 +71,7 @@ export type FollowUp = z.infer<typeof FollowUpSchema>;
 
 /**
  * A result still outstanding at discharge that someone must chase — the
- * classic dropped thread in the handover-failure taxonomy. No golden
- * exercises this yet; the shape is typed so the first one that does cannot
- * land as an untyped blob.
+ * classic dropped thread in the handover-failure taxonomy.
  */
 export const PendingResultSchema = z.object({
   description: z.string(),
@@ -98,7 +97,10 @@ export const ExtractionSchema = z.object({
   medicationListComplete: z.boolean(),
   followUps: z.array(FollowUpSchema),
   pendingResults: z.array(PendingResultSchema),
-  /** Diagnoses new to the member (absent from current verified facts). */
+  /**
+   * Diagnoses made during this admission. Chronic conditions the document
+   * merely restates stay out, even when Nola holds no fact for them yet.
+   */
   newDiagnoses: z.array(z.object({ label: z.string(), status: z.string() })),
 });
 export type Extraction = z.infer<typeof ExtractionSchema>;

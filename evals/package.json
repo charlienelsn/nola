@@ -6,9 +6,12 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "run": "tsx src/run.ts",
+    "run:model": "tsx src/runModel.ts",
     "test": "vitest run"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.117.1",
+    "@nola/brain": "workspace:*",
     "@nola/shared": "workspace:*",
     "@nola/workflow-discharge-summary": "workspace:*",
     "zod": "^3.24.1"

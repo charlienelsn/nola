@@ -33,3 +33,6 @@ pnpm-debug.log*
 # Supabase local stack state
 supabase/.temp/
 supabase/.branches/
+
+# eval run outputs (numbers go in the PR, files stay local)
+evals/results/

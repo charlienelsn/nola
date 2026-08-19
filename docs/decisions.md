@@ -71,8 +71,9 @@ Each entry: decision, reversibility.
     hour times billable share times capture rate; capture is the only one
     of the three the product moves directly without asking anyone to work
     longer. Field observation behind the duplicate-charge critical: in a
-    live GUIDE program, editing an encounter note re-drops the charge, so
-    three edits in a month produce three charges; the care manager's
+    live billing system observed in the field, editing an encounter note
+    re-drops the charge, so three edits in a month produce three charges;
+    the care manager's
     workaround batches all billing to month end, which pushes documentation
     away from the moment of work and degrades accuracy — policy.
 23. The workflow portfolio is re-derived from observed work rather than the

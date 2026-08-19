@@ -71,6 +71,11 @@ create table events (
   occurred_at      timestamptz not null,
   duration_seconds integer check (duration_seconds >= 0),
   purpose          text not null,
+  -- Requirement 9: a duration with no description of the work is not
+  -- audit-evidence. purpose says why the event happened; activity_description
+  -- says what work was actually done, and it can never be blank.
+  activity_description text not null
+    constraint activity_described check (length(btrim(activity_description)) > 0),
   payload          jsonb not null default '{}'::jsonb,
   created_at       timestamptz not null default now()
 );

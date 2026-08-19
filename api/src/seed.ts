@@ -381,8 +381,8 @@ async function seed() {
     for (const [i, memberId] of M.entries()) {
       await client.query(
         `insert into events (id, org_id, member_id, event_type, actor, occurred_at,
-           duration_seconds, purpose, payload, created_at)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$6)`,
+           duration_seconds, purpose, activity_description, payload, created_at)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$6)`,
         [
           E[i],
           ORG,
@@ -392,6 +392,10 @@ async function seed() {
           `2026-08-10T${13 + i}:00:00Z`,
           2700,
           "Initial CCM intake assessment (synthetic)",
+          "45-minute intake conversation with the member: reviewed hospital " +
+            "discharge instructions, reconciled the current medication list, " +
+            "confirmed coverage details, and drafted initial care goals " +
+            "(synthetic)",
           {},
         ],
       );

@@ -78,8 +78,8 @@ describe.skipIf(!dbUp)("member_facts invariants", () => {
       [MEMBER, ORG],
     );
     await pool.query(
-      `insert into events (id, org_id, member_id, event_type, actor, occurred_at, purpose)
-       values ($1, $2, $3, 'TestEvent', 'test-actor', now(), 'invariant tests')`,
+      `insert into events (id, org_id, member_id, event_type, actor, occurred_at, purpose, activity_description)
+       values ($1, $2, $3, 'TestEvent', 'test-actor', now(), 'invariant tests', 'row exercised by the db invariant tests (synthetic)')`,
       [EVENT, ORG, MEMBER],
     );
   });
@@ -161,5 +161,19 @@ describe.skipIf(!dbUp)("member_facts invariants", () => {
     await expect(
       pool.query("delete from events where id = $1", [EVENT]),
     ).rejects.toThrow(/append-only/);
+  });
+
+  it("rejects an event whose activity description is missing or blank", async () => {
+    // Requirement 9: a duration with no description of the work is not
+    // audit-evidence. The column is NOT NULL and CHECKed non-blank.
+    const insert = (description: string | null) =>
+      pool.query(
+        `insert into events (org_id, member_id, event_type, actor, occurred_at, purpose, activity_description)
+         values ($1, $2, 'TestEvent', 'test-actor', now(), 'invariant tests', $3)`,
+        [ORG, MEMBER, description],
+      );
+    await expect(insert(null)).rejects.toThrow(/not-null|null value/);
+    await expect(insert("")).rejects.toThrow(/activity_described/);
+    await expect(insert("   ")).rejects.toThrow(/activity_described/);
   });
 });

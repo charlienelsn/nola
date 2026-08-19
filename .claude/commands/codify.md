@@ -3,8 +3,8 @@ description: Run the codifier manually on this session (or a transcript path)
 ---
 
 Manual codify run. The instructions below are included from
-`scripts/codify-prompt.md` — the same file the autonomous codify agent uses,
-so manual and autonomous behavior never drift. Do not restate or paraphrase
+`scripts/codify-prompt.md` — the same file the nightly codify routine uses,
+so manual and scheduled behavior never drift. Do not restate or paraphrase
 rules from memory; follow the included file.
 
 Manual-mode context:

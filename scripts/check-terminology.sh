@@ -4,8 +4,8 @@
 # Incoming source documents are evidence and exempt; fixture dirs are exempt.
 set -euo pipefail
 MATCHES=$(grep -rniE '\bpatients?\b' \
-  frontend/src api/src brain/src shared/src evals/src workflows \
-  supabase/migrations \
+  frontend/src api/src brain/src shared/src evals/src evals/elicitation \
+  workflows supabase/migrations \
   --exclude-dir=node_modules \
   --exclude-dir=fixtures \
   --exclude-dir=goldens \

@@ -21,18 +21,41 @@ These encode what care management demands, independent of model capability.
    cases, or any prompt. Goldens are written fresh as synthetic cases inspired
    by observed patterns.
 4. **The severity rubric.** Critical: a wrong medication fact verified, a
-   wrong-member write, a fabricated source link. Major: a wrong non-medication
-   fact verified, a missed contradiction, a dropped task. Minor: formatting,
-   phrasing, ranking quality. Any critical error automatically demotes the
-   workflow to L1.
-5. **The medication ceiling.** Medication-related change types never exceed
-   L1 (every proposal human-reviewed) this year, regardless of eval scores.
+   wrong-member write, a fabricated source link, a billable minute recorded
+   for work that did not occur, a duplicate charge against the same member
+   and calendar month, a billing code present with no clinician source, an
+   attestation recorded with no corresponding clinician act. Major: a wrong
+   non-medication fact verified, a missed contradiction, a dropped task.
+   Minor: formatting, phrasing, ranking quality. Any critical error
+   automatically demotes the workflow to L1.
+5. **The ceilings.** Three change types are capped by judgment, not
+   measurement; they never move with eval scores. Medication-related change
+   types never exceed L1 (every proposal human-reviewed) this year. Billing
+   codes are clinician-authored: Nola completes a care plan against codes a
+   clinician assigned and never proposes, infers, invents, or extends one —
+   if a code is absent, the correct output is to say so, never to supply
+   one. Attestations are clinician acts: Nola never records that a clinician
+   examined, reviewed, or verified anything unless the clinician did it and
+   the record shows when. (Field basis: decision 21.)
 6. **Provenance on everything.** Every member fact carries its source event,
    verifier, and validity interval; every proposal cites the document that
    produced it. A fabricated source link is a critical (requirement 4).
 7. **Proposed never overwrites verified.** New evidence supersedes a
    verified fact only after human verification; until then it stays a
    proposal.
+8. **No threshold display in-period.** Never show distance-to-threshold
+   during an open billing period: no "8 minutes to billable," no progress
+   bars toward a time floor, no work queue sorted by threshold proximity.
+   Missed thresholds surface only after the period closes, as a staffing
+   and panel-design signal. A visible threshold becomes a target and the
+   pressure to find the missing minutes is structural; rounded or repeated
+   durations are a named audit flag, and OIG added chronic care management
+   to its 2026 Work Plan.
+9. **Time capture is first-class.** Every event carries actor, timestamp,
+   duration, activity description, and member link. A duration with no
+   description of the work is not audit-evidence and does not survive a
+   records request. Capture completeness is a measured property with its
+   own eval dimension, not a passive byproduct of the events table.
 
 ## Patches — deletable per model release
 

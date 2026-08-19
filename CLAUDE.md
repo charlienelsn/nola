@@ -4,7 +4,9 @@ Nola is an AI-native care service. This repo is the internal operating
 environment for Nola's own care-management team. Full strategy lives in the
 Build Strategy & Technical Plan (Drive); decisions live in `docs/decisions.md`.
 
-## Rules that never change
+## Requirements — never deleted
+
+These encode what care management demands, independent of model capability.
 
 1. **Members, never "patient."** The people Nola serves are members — in every
    schema, API path, screen, prompt, and eval case. Incoming source documents
@@ -25,6 +27,19 @@ Build Strategy & Technical Plan (Drive); decisions live in `docs/decisions.md`.
    workflow to L1.
 5. **The medication ceiling.** Medication-related change types never exceed
    L1 (every proposal human-reviewed) this year, regardless of eval scores.
+6. **Provenance on everything.** Every member fact carries its source event,
+   verifier, and validity interval; every proposal cites the document that
+   produced it. A fabricated source link is a critical (requirement 4).
+7. **Proposed never overwrites verified.** New evidence supersedes a
+   verified fact only after human verification; until then it stays a
+   proposal.
+
+## Patches — deletable per model release
+
+None yet. Every patch added to any prompt or to this file must cite the eval
+failure it fixes. On each major model release, run the ablation ritual: strip
+patches, run the golden suite, re-baseline. Re-add an instruction only after
+the model repeatedly stumbles.
 
 ## Repo map
 
@@ -34,7 +49,8 @@ Build Strategy & Technical Plan (Drive); decisions live in `docs/decisions.md`.
   whole-member context → extract against workflow schema → deterministic
   validation → route (quiet / prepared / judgment)
 - `workflows/` — one typed module per workflow (`WorkflowDefinition`)
-- `evals/` — golden cases and regression runner
+- `evals/` — golden cases, regression runner, and standing elicitation tests
+  (`evals/elicitation/`, run by hand per major model release)
 - `shared/` — member ontology + API contract types. Founder-owned
 - `docs/decisions.md` — why things are the way they are; read before proposing
   architecture changes
@@ -57,8 +73,14 @@ Build Strategy & Technical Plan (Drive); decisions live in `docs/decisions.md`.
   SDK only for side jobs (synthetic data generation, eval triage).
 - Facts, not blobs: member state is rows in `member_facts` with status
   proposed → verified → superseded/retracted, provenance, validity intervals.
-  Current state is a derived view. A proposed fact never overwrites a
-  verified fact.
+  Current state is a derived view (requirements 6–7 govern writes).
+- Task modes: cook mode (task + guardrails + exit criteria, run long) for
+  anything with mechanical verification — tests, builds, goldens. Read mode
+  (small slices, founder reads every line) for `brain/`, `shared/`, and
+  workflow schemas.
+- The Brain's model-call module must support a `MINIMAL_PROMPT` flag that
+  strips all non-requirement instructions, so ablation is a one-flag eval
+  run.
 - Every model call logs a trace (prompt ref, context refs, output, tokens,
   latency, cost) to the `traces` table, OpenTelemetry GenAI format.
 - Workflow-specific logic lives only in `workflows/<name>/` (hard rule from
@@ -68,14 +90,33 @@ Build Strategy & Technical Plan (Drive); decisions live in `docs/decisions.md`.
 
 ## Codification
 
-Codification is autonomous via SessionEnd→queue→PR; merge gate is human. Manual: /codify.
+Codification runs as a nightly platform routine (decision 18) using
+`scripts/codify-prompt.md`; it opens `codify:` PRs and the merge gate is
+human. Manual: /codify.
 
 ## Mistakes log
 
 Append entries here whenever an agent gets something wrong, so the next
-session does not repeat it.
+session does not repeat it. Entries are patches, never requirements — the
+deletion pass (decision 17) and the codifier's month-old pruning apply.
 
 - `supabase db reset` fails mid-recreate ("connection reset by peer") if the
   dev API holds open DB connections — stop `pnpm dev` before `pnpm reset`.
   Also: piping a command through `tail` masks its exit code; the failure went
   unnoticed for a full cycle.
+- A workflow schema's extraction-rule doc-comments can read correctly against
+  the golden that inspired them and still silently contradict another golden
+  (e.g. a rule stated as "the action was completed" vs. the goldens' real
+  boundary of "who was responsible for the action") — the goldens cross-check
+  only grades each golden against its own expected values, so it won't catch
+  this. Before trusting a doc-comment's wording, check it against every
+  golden that touches that field, not just the one that motivated it.
+- A new field added to a workflow's extraction schema needs matching coverage
+  in the eval scorer in the same change. A typed-but-unscored field parses
+  and validates fine, so the gap stays invisible until a real run drops that
+  field's data — silently defeating requirement 4's "dropped task is major."
+- A headless codify run left an untracked CI-check script built on a false
+  premise: it read a branch's real Claude-Session commit trailers as an
+  unreplaced "template placeholder" and would have failed every legitimate
+  branch. Verify an agent-authored guard's premise against git history
+  before wiring it in — and never adopt work-tree files you can't attribute.

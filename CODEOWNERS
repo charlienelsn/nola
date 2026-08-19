@@ -3,5 +3,6 @@
 /shared/           @charlienelsn
 /workflows/**/schema*   @charlienelsn
 /workflows/**/validate* @charlienelsn
+/workflows/**/definition* @charlienelsn
 /CLAUDE.md         @charlienelsn
 /docs/             @charlienelsn

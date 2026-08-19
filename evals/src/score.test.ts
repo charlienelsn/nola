@@ -211,6 +211,26 @@ describe("severity rubric", () => {
     ).toBe(true);
   });
 
+  it("flags a dropped pending result as major", () => {
+    const golden = structuredClone(byName("01-clean-routine-discharge"));
+    if (golden.expected.extraction === null) throw new Error("unexpected");
+    golden.expected.extraction.pendingResults.push({
+      description: "Blood culture results",
+      resultsTo: "Dr. Okafor",
+      expectedBy: null,
+    });
+    expect(scoreCase(golden, perfectResult(golden))).toEqual([]);
+    const dropped = perfectResult(golden);
+    if (dropped.extraction === null) throw new Error("unexpected");
+    dropped.extraction.pendingResults = [];
+    const findings = scoreCase(golden, dropped);
+    expect(
+      findings.some(
+        (f) => f.severity === "major" && f.code === "missing-pending-result",
+      ),
+    ).toBe(true);
+  });
+
   it("reports extra proposals as minor noise, still passing", () => {
     const golden = byName("01-clean-routine-discharge");
     const result = perfectResult(golden);

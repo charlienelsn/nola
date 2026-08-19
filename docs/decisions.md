@@ -37,3 +37,19 @@ Each entry: decision, reversibility.
     attributes are self-reported facts with provenance and are excluded from
     escalation/autonomy inputs; parity across language and demographics
     becomes an eval dimension when the harness lands — policy.
+16. Patch-versus-requirement test governs every instruction in prompts,
+    CLAUDE.md, and skills: requirements encode what care management demands
+    and are never deleted; patches work around a current model's weakness,
+    cite the eval failure they fix, and are deleted per model release after
+    goldens confirm — policy.
+17. Ablation ritual on every major model release: strip patches, run the
+    golden suite, re-baseline; CLAUDE.md, skills, and hooks get a deletion
+    pass roughly every six months — policy.
+18. Codify and maintenance run as scheduled platform routines, never custom
+    queue/daemon plumbing; the codify agent holds at L1 (auto-PR, human
+    merge), superseding decision 14's promotion timetable — reversible.
+19. Golden suites harden on saturation: when a workflow aces its goldens,
+    write meaner ones; the saturated suite stays as a regression guard —
+    policy.
+20. Standing elicitation tests (evals/elicitation/) run on every major model
+    release to detect product overhang — policy.

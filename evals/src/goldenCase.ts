@@ -1,13 +1,19 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { AUTONOMY_LEVELS } from "@nola/shared";
+import {
+  type Extraction,
+  ExtractionSchema,
+} from "@nola/workflow-discharge-summary";
 import { z } from "zod";
 
 /**
  * Golden case format — the contract between a workflow's goldens directory
- * and the eval runner. The `expected.extraction` shape here is the v0
- * discharge-summary extraction schema; when the workflow factory lands
- * (weeks 4–5), per-workflow expected shapes migrate into workflow modules.
+ * and the eval runner. The extraction shape lives in the workflow module
+ * (`workflows/discharge-summary/src/schema.ts`, founder-reviewed) and is
+ * imported here, so goldens are graded against the same typed schema the
+ * Brain extracts against. When the workflow factory lands (weeks 4–5), the
+ * per-workflow schema lookup generalizes; the envelope below stays.
  */
 
 export const SeveritySchema = z.enum(["critical", "major", "minor"]);
@@ -21,35 +27,8 @@ const FactRefSchema = z.object({
   attribute: z.string(),
 });
 
-const MedicationSchema = z.object({
-  name: z.string(),
-  dose: z.string().nullable(),
-  frequency: z.string().nullable(),
-  change: z.enum(["new", "continued", "changed", "stopped"]),
-  changeDocumented: z.boolean(),
-});
-
-const FollowUpSchema = z.object({
-  description: z.string(),
-  with: z.string().nullable(),
-  dueBy: z.string().nullable(),
-  fullySpecified: z.boolean(),
-});
-
-export const ExtractionSchema = z.object({
-  admission: z.object({
-    facility: z.string(),
-    admittedOn: z.string(),
-    dischargedOn: z.string(),
-    principalDiagnosis: z.string(),
-  }),
-  medications: z.array(MedicationSchema),
-  medicationListComplete: z.boolean(),
-  followUps: z.array(FollowUpSchema),
-  pendingResults: z.array(z.unknown()),
-  newDiagnoses: z.array(z.object({ label: z.string(), status: z.string() })),
-});
-export type Extraction = z.infer<typeof ExtractionSchema>;
+export { ExtractionSchema };
+export type { Extraction };
 
 export const GoldenCaseSchema = z.object({
   name: z.string(),

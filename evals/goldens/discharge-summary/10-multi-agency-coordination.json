@@ -144,7 +144,10 @@
       },
       {
         "changeType": "task_creation",
-        "summaryMustMention": ["DME", "home to sign"],
+        "summaryMustMention": [
+          ["DME", "knee walker", "MedEquip"],
+          "home to sign"
+        ],
         "autonomyLevelMax": "L1"
       },
       {
@@ -169,6 +172,9 @@
       "miss that the DME delivery requires the member home to sign while VNA starts the same window — the collision is the coordination insight",
       "lose the SNAP recertification thread just because the hospital document never mentions it — whole-member context includes the open SDOH facts",
       "address the member as anything but Miss Dee in task text"
+    ],
+    "mustNotChecks": [
+      { "type": "proposal-summaries-must-not-contain", "text": "Denise" }
     ]
   }
 }

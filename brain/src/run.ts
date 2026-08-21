@@ -97,6 +97,9 @@ const MISROUTE_TASK =
  *    non-task proposals dropped, and a misroute escalation task guaranteed
  *    (mentioning "wrong member" and "misrouted") — routing judgment.
  * 3. Autonomy levels come from the workflow and its ceilings, never the model.
+ * 4. A contradiction must cite a verified fact that exists. A citation
+ *    matching no fact row cannot be resolved against member_facts
+ *    (requirement 6) — the run escalates to judgment for a human to re-key.
  */
 export function finalizeDischargeRun(
   member: MemberContext,
@@ -146,13 +149,20 @@ export function finalizeDischargeRun(
     };
   }
 
+  const factKeys = new Set(
+    member.currentFacts.map((f) => `${f.entity}\u0000${f.attribute}`),
+  );
+  const uncitable = output.contradictions.some(
+    (c) => !factKeys.has(`${c.against.entity}\u0000${c.against.attribute}`),
+  );
+
   const issues = validateExtraction(extraction);
   return {
     identity: { matchesMember: true },
     extraction,
     contradictions: output.contradictions,
     proposals: output.proposals.map(withLevel),
-    routing: routeExtraction(extraction, issues),
+    routing: uncitable ? "judgment" : routeExtraction(extraction, issues),
   };
 }
 

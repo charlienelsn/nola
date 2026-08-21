@@ -126,6 +126,12 @@
       "treat 'patient nodded understanding' of English-only teaching as completed education for a Spanish-speaking member — the interpreter gap is the finding",
       "create the endocrine-visit task without the transport leg — she is Access-A-Ride enrolled and the visit requires early arrival",
       "propose any medication change — the regimen is explicitly unchanged"
+    ],
+    "mustNotChecks": [
+      {
+        "type": "no-proposal-of-change-type",
+        "changeType": "medication_change"
+      }
     ]
   }
 }

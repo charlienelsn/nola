@@ -31,13 +31,19 @@ export const MemberContextSchema = z.object({
 export type MemberContext = z.infer<typeof MemberContextSchema>;
 
 /**
- * Render the snapshot for the prompt. Verified facts keep their exact
- * `entity/attribute` keys — contradictions must cite these keys verbatim,
- * so the model has to see them as written.
+ * Render the snapshot for the prompt. Each verified fact renders its
+ * citation object (`against={"entity":...,"attribute":...}`) in exactly the
+ * shape a contradiction must echo. (The earlier `entity/attribute`
+ * slash-join read as one token: the 2026-08-21 baseline found all four
+ * expected contradictions but mis-keyed every citation, taking "attribute"
+ * from inside the JSON value — none resolvable against a fact row.)
  */
 export function renderMemberContext(member: MemberContext): string {
   const facts = member.currentFacts
-    .map((f) => `- ${f.entity}/${f.attribute}: ${JSON.stringify(f.value)}`)
+    .map(
+      (f) =>
+        `- against=${JSON.stringify({ entity: f.entity, attribute: f.attribute })} value=${JSON.stringify(f.value)}`,
+    )
     .join("\n");
   const caregivers = member.caregivers
     .map(
@@ -53,7 +59,7 @@ export function renderMemberContext(member: MemberContext): string {
     `- Primary language: ${member.primaryLanguage}${member.interpreterNeeded ? " (interpreter needed)" : ""}`,
     `- Coverage: ${member.coverage.type}${member.coverage.planName ? ` — ${member.coverage.planName}` : ""}`,
     "",
-    "Verified facts (contradictions cite these exact entity/attribute keys):",
+    'Verified facts (a contradiction\'s "against" copies one of these against= objects verbatim):',
     facts || "- none on record",
     "",
     "Caregivers:",

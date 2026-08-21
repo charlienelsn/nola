@@ -36,7 +36,10 @@ export function validateExtraction(extraction: Extraction): string[] {
     seen.add(key);
 
     // A start or dose change without the dose is unactionable — nothing to
-    // propose for human review. Stops legitimately carry no dose.
+    // propose for human review. Stops carry no go-forward regimen: dose and
+    // frequency are null (schema contract) — a stop carrying one usually
+    // means values imported from the verified facts, which belong in the
+    // contradiction, not the extraction.
     if (med.change === "new" || med.change === "changed") {
       if (med.dose === null) {
         issues.push(`${med.change} medication ${med.name} has no dose`);
@@ -44,6 +47,15 @@ export function validateExtraction(extraction: Extraction): string[] {
       if (med.frequency === null) {
         issues.push(`${med.change} medication ${med.name} has no frequency`);
       }
+    }
+    if (
+      med.change === "stopped" &&
+      (med.dose !== null || med.frequency !== null)
+    ) {
+      const carried = [med.dose, med.frequency].filter(Boolean).join(" ");
+      issues.push(
+        `stopped medication ${med.name} carries a regimen (${carried}) — record the stop; prior values belong to the verified fact`,
+      );
     }
   }
 

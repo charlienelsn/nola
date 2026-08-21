@@ -115,7 +115,7 @@
       },
       {
         "changeType": "fact_proposal",
-        "summaryMustMention": ["readmission", "30 days"],
+        "summaryMustMention": [["readmission", "readmitted"], "30 days"],
         "autonomyLevelMax": "L1"
       },
       {

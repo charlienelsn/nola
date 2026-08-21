@@ -39,11 +39,15 @@ One JSON file per case:
     be surfaced, not silently resolved.
   - `proposals`: change types the run must propose; medication-related ones
     are capped at L1 (the medication ceiling), like everything else this
-    year.
+    year. `summaryMustMention` phrases match stemmed and order-free; a
+    nested array lists synonymous alternatives, any one of which satisfies
+    the slot — prefer phrases the correct output necessarily contains.
   - `routing`: `prepared` (clean, ready for review) or `judgment`
     (escalate to the care manager with questions). Nothing routes `quiet`
     at L1.
-  - `mustNot`: hard prohibitions; violating one is an automatic critical.
+  - `mustNot`: hard prohibitions in prose. `mustNotChecks` is the typed
+    subset the scorer enforces — violating one is an automatic critical;
+    prose entries without a typed check are review guidance.
 
 `expected.extraction` is the v0 proposal for this workflow's extraction
 schema. The typed schema in `workflows/discharge-summary/` is

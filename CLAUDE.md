@@ -143,3 +143,8 @@ deletion pass (decision 17) and the codifier's month-old pruning apply.
   unreplaced "template placeholder" and would have failed every legitimate
   branch. Verify an agent-authored guard's premise against git history
   before wiring it in — and never adopt work-tree files you can't attribute.
+- Render identifiers in the exact shape the model must echo them: the
+  entity/attribute slash-join mis-keyed every found contradiction (2026-08-21
+  baseline); run.ts guard 4 now validates citations against the fact rows.
+- Check the matcher before trusting an eval FAIL — substring matching graded
+  nine correct outputs as dropped; pick golden phrases the output necessarily contains.

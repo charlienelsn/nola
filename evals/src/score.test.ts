@@ -27,7 +27,10 @@ function perfectResult(golden: GoldenCase): RunResult {
     })),
     proposals: e.proposals.map((p) => ({
       changeType: p.changeType,
-      summary: `[synthetic] ${p.summaryMustMention.join(" — ")}`,
+      // An any-of mention slot (string[]) is satisfied by its first phrase.
+      summary: `[synthetic] ${p.summaryMustMention
+        .map((m) => (Array.isArray(m) ? m[0] : m))
+        .join(" — ")}`,
       autonomyLevel: "L1" as const,
     })),
     routing: e.routing,
@@ -242,5 +245,132 @@ describe("severity rubric", () => {
     const findings = scoreCase(golden, result);
     expect(findings.map((f) => f.code)).toEqual(["extra-proposal"]);
     expect(summarizeCase(golden, findings).pass).toBe(true);
+  });
+});
+
+describe("mention matching", () => {
+  it("matches morphological variants through the stem (schedule/scheduling)", () => {
+    const golden = byName("04-omitted-home-med");
+    const result = perfectResult(golden);
+    const task = result.proposals.find(
+      (r) => r.changeType === "task_creation" && r.summary.includes("schedule"),
+    );
+    if (!task) throw new Error("unexpected");
+    task.summary =
+      "Arrange the PCP follow-up — the hospital left scheduling to the member, so Nola should book it.";
+    const findings = scoreCase(golden, result);
+    expect(
+      findings.filter(
+        (f) => f.code === "dropped-proposal" && /PCP/.test(f.detail),
+      ),
+    ).toEqual([]);
+  });
+
+  it("accepts any phrase of an any-of mention slot", () => {
+    const golden = byName("06-unexplained-med-stop");
+    const result = perfectResult(golden);
+    const med = result.proposals.find(
+      (r) => r.changeType === "medication_change",
+    );
+    if (!med) throw new Error("unexpected");
+    med.summary =
+      "Stop Insulin glargine, marked DISCONTINUED with no stated reason.";
+    const findings = scoreCase(golden, result);
+    expect(
+      findings.filter(
+        (f) => f.code === "dropped-proposal" && /glargine/i.test(f.detail),
+      ),
+    ).toEqual([]);
+  });
+
+  it("consumes the closest same-type near-match so one defect reports once", () => {
+    const golden = byName("06-unexplained-med-stop");
+    const result = perfectResult(golden);
+    const task = result.proposals.find(
+      (r) => r.changeType === "task_creation" && /regimen/.test(r.summary),
+    );
+    if (!task) throw new Error("unexpected");
+    // Semantically adjacent but missing "regimen": near-match, not a match.
+    task.summary =
+      "Track the PCP appointment with Dr. Osei on 2026-08-12 and confirm the member attends.";
+    const findings = scoreCase(golden, result);
+    const dropped = findings.filter(
+      (f) => f.code === "dropped-proposal" && /regimen/.test(f.detail),
+    );
+    expect(dropped).toHaveLength(1);
+    expect(dropped[0]?.detail).toContain("closest, consumed");
+    // The near-match must not double-report as an extra proposal.
+    expect(
+      findings.filter(
+        (f) => f.code === "extra-proposal" && /Dr\. Osei/.test(f.detail),
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("follow-up matching", () => {
+  it("matches through the owner when the description diverges", () => {
+    const golden = byName("01-clean-routine-discharge");
+    const result = perfectResult(golden);
+    if (result.extraction === null) throw new Error("unexpected");
+    const fu = result.extraction.followUps.find((f) =>
+      /PCP/.test(f.description),
+    );
+    if (!fu) throw new Error("unexpected");
+    // The baseline's actual phrasing: no expected description token at all,
+    // but the owner carries the key.
+    fu.description =
+      "Primary care follow-up within 14 days; office notified via portal";
+    fu.with = "Dr. Patel (PCP)";
+    const findings = scoreCase(golden, result);
+    expect(findings.filter((f) => f.code === "missing-follow-up")).toEqual([]);
+  });
+
+  it("reports a date mismatch as wrong-follow-up-date, not missing", () => {
+    const golden = byName("10-multi-agency-coordination");
+    const result = perfectResult(golden);
+    if (result.extraction === null) throw new Error("unexpected");
+    const fu = result.extraction.followUps.find((f) =>
+      /DME/.test(f.description),
+    );
+    if (!fu) throw new Error("unexpected");
+    fu.dueBy = "2026-07-29"; // window start; golden pins the window end
+    const findings = scoreCase(golden, result);
+    expect(findings.filter((f) => f.code === "missing-follow-up")).toEqual([]);
+    const dated = findings.filter((f) => f.code === "wrong-follow-up-date");
+    expect(dated).toHaveLength(1);
+    expect(dated[0]?.severity).toBe("major");
+  });
+});
+
+describe("mustNotChecks", () => {
+  it("flags a forbidden change type as critical", () => {
+    const golden = byName("01-clean-routine-discharge");
+    const result = perfectResult(golden);
+    result.proposals.push({
+      changeType: "medication_change",
+      summary: "Change furosemide to 80 mg daily",
+      autonomyLevel: "L1",
+    });
+    const findings = scoreCase(golden, result);
+    expect(
+      findings.some(
+        (f) => f.severity === "critical" && f.code === "must-not-violation",
+      ),
+    ).toBe(true);
+  });
+
+  it("flags forbidden text in a proposal summary as critical", () => {
+    const golden = byName("05-vague-followup");
+    const result = perfectResult(golden);
+    const task = result.proposals.find((r) => r.changeType === "task_creation");
+    if (!task) throw new Error("unexpected");
+    task.summary += " — call Samuel to confirm.";
+    const findings = scoreCase(golden, result);
+    expect(
+      findings.some(
+        (f) => f.severity === "critical" && f.code === "must-not-violation",
+      ),
+    ).toBe(true);
   });
 });

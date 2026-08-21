@@ -24,6 +24,11 @@ const member: MemberContext = {
       attribute: "chf",
       value: { label: "Congestive heart failure", status: "active" },
     },
+    {
+      entity: "medication",
+      attribute: "furosemide",
+      value: { name: "Furosemide", dose: "20 mg", frequency: "daily" },
+    },
   ],
   caregivers: [
     {
@@ -174,12 +179,47 @@ describe("finalizeDischargeRun", () => {
     expect(result.extraction).toBeNull();
     expect(result.routing).toBe("judgment");
   });
+
+  it("escalates to judgment when a contradiction cites a fact that does not exist", () => {
+    const output: ModelOutput = {
+      identity: matchingIdentity,
+      extraction,
+      contradictions: [
+        {
+          detail: "dose conflict",
+          // The baseline's exact mis-key shape: slash-joined entity, value
+          // key as attribute. No such fact row exists.
+          against: { entity: "medication/furosemide", attribute: "dose" },
+        },
+      ],
+      proposals: [],
+    };
+    const result = finalizeDischargeRun(member, output);
+    expect(result.routing).toBe("judgment");
+    // The contradiction itself is kept for the human, never dropped.
+    expect(result.contradictions).toHaveLength(1);
+  });
+
+  it("keeps prepared routing when every contradiction cites a real fact", () => {
+    const output: ModelOutput = {
+      identity: matchingIdentity,
+      extraction,
+      contradictions: [
+        {
+          detail: "verified dose outdated",
+          against: { entity: "medication", attribute: "furosemide" },
+        },
+      ],
+      proposals: [],
+    };
+    expect(finalizeDischargeRun(member, output).routing).toBe("prepared");
+  });
 });
 
 describe("renderMemberContext", () => {
-  it("renders verified fact keys verbatim, with interpreter and caregiver context", () => {
+  it("renders each fact's citation object verbatim, with interpreter and caregiver context", () => {
     const text = renderMemberContext(member);
-    expect(text).toContain("condition/chf");
+    expect(text).toContain('against={"entity":"condition","attribute":"chf"}');
     expect(text).toContain("Cantonese (interpreter needed)");
     expect(text).toContain(
       "Kevin Chau (son, involvement: central, prefers English)",

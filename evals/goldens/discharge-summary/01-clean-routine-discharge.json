@@ -133,6 +133,12 @@
       "propose any medication change (document states none occurred)",
       "mark any verified fact superseded",
       "fabricate a source link — every proposal cites this document"
+    ],
+    "mustNotChecks": [
+      {
+        "type": "no-proposal-of-change-type",
+        "changeType": "medication_change"
+      }
     ]
   }
 }

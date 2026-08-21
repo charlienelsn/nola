@@ -124,7 +124,10 @@
       },
       {
         "changeType": "fact_proposal",
-        "summaryMustMention": ["heart failure exacerbation", "admission"],
+        "summaryMustMention": [
+          "heart failure exacerbation",
+          ["admission", "hospitalization", "hospitalized", "admitted"]
+        ],
         "autonomyLevelMax": "L1"
       }
     ],

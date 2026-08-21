@@ -117,7 +117,7 @@
       },
       {
         "changeType": "fact_proposal",
-        "summaryMustMention": ["missed refill", "adherence"],
+        "summaryMustMention": ["missed refill", ["adherence", "refill"]],
         "autonomyLevelMax": "L1"
       }
     ],

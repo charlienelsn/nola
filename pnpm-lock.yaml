@@ -20,9 +20,15 @@ importers:
       '@fastify/cors':
         specifier: ^10.0.1
         version: 10.1.0
+      '@nola/brain':
+        specifier: workspace:^
+        version: link:../brain
       '@nola/shared':
         specifier: workspace:*
         version: link:../shared
+      '@nola/workflow-discharge-summary':
+        specifier: workspace:^
+        version: link:../workflows/discharge-summary
       fastify:
         specifier: ^5.2.0
         version: 5.12.0

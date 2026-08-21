@@ -200,6 +200,150 @@ describe("finalizeDischargeRun", () => {
     expect(result.contradictions).toHaveLength(1);
   });
 
+  it("attaches a fact payload when exactly one extraction med is named in the summary", () => {
+    const output: ModelOutput = {
+      identity: matchingIdentity,
+      extraction,
+      contradictions: [],
+      proposals: [
+        {
+          changeType: "medication_change",
+          summary: "Change Furosemide to 40 mg daily after IV diuresis",
+        },
+        {
+          changeType: "task_creation",
+          summary: "Track the PCP visit with Dr. Test by 2026-08-12",
+        },
+      ],
+    };
+    const result = finalizeDischargeRun(member, output);
+    expect(result.proposals[0]?.payload).toEqual({
+      entity: "medication",
+      attribute: "furosemide",
+      value: { name: "Furosemide", dose: "40 mg", frequency: "daily" },
+    });
+    // Tasks carry no fact payload — accepting one creates a task, not a fact.
+    expect(result.proposals[1]?.payload).toBeNull();
+  });
+
+  it("attaches nothing when the summary names no extraction med, or several", () => {
+    const metoprolol = {
+      name: "Metoprolol",
+      dose: "50 mg",
+      frequency: "daily",
+      change: "new",
+      changeDocumented: true,
+    } as const;
+    const output: ModelOutput = {
+      identity: matchingIdentity,
+      extraction: { ...extraction, medications: [furosemide, metoprolol] },
+      contradictions: [],
+      proposals: [
+        {
+          changeType: "medication_change",
+          summary: "Adjust the diuretic per the discharge plan", // names none
+        },
+        {
+          changeType: "medication_change",
+          summary: "Start Metoprolol and continue Furosemide", // names both
+        },
+      ],
+    };
+    const result = finalizeDischargeRun(member, output);
+    expect(result.proposals[0]?.payload).toBeNull();
+    expect(result.proposals[1]?.payload).toBeNull();
+  });
+
+  it("a stopped med's payload records the stop, never an active regimen", () => {
+    const stopped = {
+      name: "Insulin glargine",
+      dose: null,
+      frequency: null,
+      change: "stopped",
+      changeDocumented: true,
+    } as const;
+    const output: ModelOutput = {
+      identity: matchingIdentity,
+      extraction: { ...extraction, medications: [stopped] },
+      contradictions: [],
+      proposals: [
+        {
+          changeType: "medication_change",
+          summary: "Stop Insulin glargine per the documented taper plan",
+        },
+      ],
+    };
+    const result = finalizeDischargeRun(member, output);
+    expect(result.proposals[0]?.payload?.value).toEqual({
+      name: "Insulin glargine",
+      dose: null,
+      frequency: null,
+      status: "stopped",
+    });
+  });
+
+  it("reuses the chart's attribute when the member already holds a fact for the name", () => {
+    const chartMember: MemberContext = {
+      ...member,
+      currentFacts: [
+        ...member.currentFacts,
+        {
+          entity: "medication",
+          attribute: "glargine_legacy_key",
+          value: { name: "Insulin glargine", dose: "20 units" },
+        },
+      ],
+    };
+    const glargine = {
+      name: "Insulin glargine",
+      dose: "10 units",
+      frequency: "nightly",
+      change: "changed",
+      changeDocumented: true,
+    } as const;
+    const output: ModelOutput = {
+      identity: matchingIdentity,
+      extraction: { ...extraction, medications: [glargine] },
+      contradictions: [],
+      proposals: [
+        {
+          changeType: "medication_change",
+          summary: "Reduce Insulin glargine to 10 units nightly",
+        },
+      ],
+    };
+    const result = finalizeDischargeRun(chartMember, output);
+    // The chart's key wins so the accept supersedes the existing fact
+    // instead of forking a second chain under a derived attribute.
+    expect(result.proposals[0]?.payload?.attribute).toBe("glargine_legacy_key");
+  });
+
+  it("attaches a condition payload for a fact_proposal naming one new diagnosis", () => {
+    const output: ModelOutput = {
+      identity: matchingIdentity,
+      extraction: {
+        ...extraction,
+        newDiagnoses: [
+          { label: "Community-acquired pneumonia", status: "improving" },
+        ],
+      },
+      contradictions: [],
+      proposals: [
+        {
+          changeType: "fact_proposal",
+          summary:
+            "Add new diagnosis from this admission: community-acquired pneumonia, improving at discharge",
+        },
+      ],
+    };
+    const result = finalizeDischargeRun(member, output);
+    expect(result.proposals[0]?.payload).toEqual({
+      entity: "condition",
+      attribute: "community_acquired_pneumonia",
+      value: { label: "Community-acquired pneumonia", status: "improving" },
+    });
+  });
+
   it("keeps prepared routing when every contradiction cites a real fact", () => {
     const output: ModelOutput = {
       identity: matchingIdentity,

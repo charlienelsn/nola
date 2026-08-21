@@ -150,6 +150,19 @@ export const ProposalWithSourceSchema = ProposalSchema.extend({
       activityDescription: z.string(),
     })
     .nullable(),
+  /**
+   * The verbatim source document behind the source event, when one exists
+   * (ingested proposals). "Source beside proposals" means the reviewer sees
+   * the actual document text, not only the arrival event's description.
+   */
+  sourceDocument: z
+    .object({
+      id: z.string().uuid(),
+      docType: z.string(),
+      source: z.string(),
+      content: z.string(),
+    })
+    .nullable(),
 });
 export type ProposalWithSource = z.infer<typeof ProposalWithSourceSchema>;
 
@@ -193,6 +206,41 @@ export const ProposalDecisionResponseSchema = z.object({
 export type ProposalDecisionResponse = z.infer<
   typeof ProposalDecisionResponseSchema
 >;
+
+// ---------- Ingestion (plan section 9, API contract v1: POST /ingest) ----------
+/**
+ * Any workflow's input enters here. The caller has already mapped the
+ * document to a member (mapping happens at ingestion — requirement 1's
+ * terminology boundary); the Brain's identity check still guards a
+ * wrong-member routing after that mapping.
+ */
+export const IngestRequestSchema = z.object({
+  eventType: z.string().min(1).max(100),
+  memberId: z.string().uuid(),
+  source: z.string().min(1).max(500),
+  /** ISO timestamp the source produced/sent the document — validated as a
+   * real timestamp so garbage (or Postgres "special" values like infinity)
+   * never reaches the append-only events table. */
+  receivedAt: z.string().datetime({ offset: true }),
+  /** Verbatim document text — evidence, stored untouched. */
+  document: z.string().min(1).max(200_000),
+  /** Who/what performed the ingestion (gateway, uploader). */
+  actor: z.string().min(1).max(200),
+});
+export type IngestRequest = z.infer<typeof IngestRequestSchema>;
+
+export const IngestResponseSchema = z.object({
+  eventId: z.string().uuid(),
+  documentId: z.string().uuid(),
+  memberId: z.string().uuid(),
+  workflow: z.string(),
+  /** The Brain's routing for the run; every proposal still lands pending. */
+  routing: z.enum(["prepared", "judgment"]),
+  identityMatches: z.boolean(),
+  proposalIds: z.array(z.string().uuid()),
+  traceId: z.string().nullable(),
+});
+export type IngestResponse = z.infer<typeof IngestResponseSchema>;
 
 // ---------- WorkflowDefinition (plan section 9) ----------
 // A workflow is a typed module, not a config language.

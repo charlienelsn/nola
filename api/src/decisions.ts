@@ -5,7 +5,7 @@ import type {
 } from "@nola/shared";
 import type pg from "pg";
 import { z } from "zod";
-import { proposalFromRow } from "./db.js";
+import { proposalFromRow, safeRollback } from "./db.js";
 
 /**
  * POST /proposals/:id/decision — the write-back half of the review loop
@@ -51,6 +51,13 @@ export class DecisionError extends Error {
 }
 
 const FACT_CHANGE_TYPES = new Set(["fact_proposal", "medication_change"]);
+
+/**
+ * Entities a review accept may write. Billing codes and attestations are
+ * clinician-authored fact types Nola never mints (requirement 5, decision
+ * 21) — enforced here at the write boundary, not just in prompts.
+ */
+const WRITABLE_FACT_ENTITIES = new Set(["medication", "condition", "sdoh"]);
 
 export async function decideProposal(
   client: pg.PoolClient,
@@ -154,6 +161,12 @@ export async function decideProposal(
         );
       }
       const { entity, attribute, value } = parsed.data;
+      if (!WRITABLE_FACT_ENTITIES.has(entity)) {
+        throw new DecisionError(
+          422,
+          `facts of entity "${entity}" are not writable through review — billing codes and attestations are clinician-authored (decision 21)`,
+        );
+      }
 
       // Serialize concurrent accepts targeting the same fact key: without
       // this, two decisions racing on (member, entity, attribute) both pass
@@ -213,7 +226,7 @@ export async function decideProposal(
       supersededFactId,
     };
   } catch (err) {
-    await client.query("rollback");
+    await safeRollback(client);
     // Backstop for races the advisory lock does not cover: surface a
     // conflict, not a raw database error.
     if ((err as { code?: string }).code === "23505") {

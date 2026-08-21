@@ -105,10 +105,16 @@ describe.skipIf(!dbUp)("decideProposal", () => {
     await pool.query("delete from proposals where org_id = $1", [ORG]);
     // events is append-only for the data plane; test cleanup disables the
     // trigger for its own synthetic rows only (decision events included),
-    // so the fixture inserts are re-runnable.
-    await pool.query("set session_replication_role = replica");
-    await pool.query("delete from events where org_id = $1", [ORG]);
-    await pool.query("set session_replication_role = origin");
+    // so the fixture inserts are re-runnable. The SET must ride the same
+    // connection as the DELETE, so pin one client.
+    const cleanup = await pool.connect();
+    try {
+      await cleanup.query("set session_replication_role = replica");
+      await cleanup.query("delete from events where org_id = $1", [ORG]);
+      await cleanup.query("set session_replication_role = origin");
+    } finally {
+      cleanup.release();
+    }
     await pool.query("delete from members where id = $1", [MEMBER]);
     await pool.query("delete from orgs where id = $1", [ORG]);
     await pool.end();
@@ -262,6 +268,20 @@ describe.skipIf(!dbUp)("decideProposal", () => {
     );
     expect(chain.rowCount).toBe(2);
     expect(chain.rows.filter((r) => r.status === "superseded")).toHaveLength(1);
+  });
+
+  it("refuses to write entities decision 21 reserves for clinicians", async () => {
+    const id = await insertProposal("fact_proposal", {
+      entity: "billing_code",
+      attribute: "cpt_99490",
+      value: { code: "99490" },
+    });
+    await expect(decide(id)).rejects.toMatchObject({ statusCode: 422 });
+    const facts = await pool.query(
+      "select count(*)::int as n from member_facts where org_id = $1",
+      [ORG],
+    );
+    expect(facts.rows[0].n).toBe(0);
   });
 
   it("refuses a fact accept whose payload is not fact-shaped", async () => {

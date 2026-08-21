@@ -114,11 +114,8 @@
         "summaryMustMention": [
           "Insulin glargine",
           "discontinued",
-          [
-            "no documented rationale",
-            "no stated reason",
-            "without a stated reason"
-          ]
+          "no",
+          ["rationale", "reason"]
         ],
         "autonomyLevelMax": "L1"
       },

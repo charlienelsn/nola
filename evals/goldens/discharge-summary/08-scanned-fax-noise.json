@@ -115,7 +115,10 @@
       },
       {
         "changeType": "fact_proposal",
-        "summaryMustMention": [["readmission", "readmitted"], "30 days"],
+        "summaryMustMention": [
+          ["readmission", "readmitted", "second exacerbation"],
+          "30 days"
+        ],
         "autonomyLevelMax": "L1"
       },
       {

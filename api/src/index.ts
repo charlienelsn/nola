@@ -1,5 +1,9 @@
 import cors from "@fastify/cors";
+import { runDischargeSummary } from "@nola/brain";
 import {
+  IngestRequestSchema,
+  type IngestResponse,
+  IngestResponseSchema,
   type Member,
   MemberSchema,
   type MemberState,
@@ -20,6 +24,8 @@ import {
   proposalWithSourceFromRow,
 } from "./db.js";
 import { DecisionError, decideProposal } from "./decisions.js";
+import { IngestError, ingestDischarge } from "./ingest.js";
+import { pgTraceSink } from "./traceSink.js";
 
 /**
  * Nola API — contract endpoints (plan section 9, API contract v1).
@@ -94,10 +100,13 @@ app.get<{ Querystring: { status?: string } }>(
       `select p.*,
               m.chosen_name, m.primary_language, m.interpreter_needed,
               e.id as event_id, e.event_type, e.actor as event_actor,
-              e.occurred_at, e.purpose, e.activity_description
+              e.occurred_at, e.purpose, e.activity_description,
+              d.id as document_id, d.doc_type as document_doc_type,
+              d.source as document_source, d.content as document_content
        from proposals p
        join members m on m.id = p.member_id
        left join events e on e.id = p.source_event_id
+       left join documents d on d.event_id = p.source_event_id
        where p.status = $1
        order by p.created_at, p.id`,
       [status.data],
@@ -144,6 +153,61 @@ app.post<{ Params: { id: string } }>(
     }
   },
 );
+
+// POST /ingest — any workflow's input enters here (contract v1). Runs the
+// Brain synchronously for now: one model call, ~30-45s. pg-boss moves this
+// to a job when arrival volume needs it; the contract does not change.
+app.post("/ingest", async (req, reply): Promise<IngestResponse | undefined> => {
+  // Bridge auth for the cost-bearing endpoint until managed auth lands:
+  // when NOLA_INGEST_TOKEN is set, ingestion requires it. The dev default
+  // (unset) stays open on loopback only — every model call here costs real
+  // money, so any non-loopback deployment must set the token.
+  const token = process.env.NOLA_INGEST_TOKEN;
+  if (token && req.headers["x-ingest-token"] !== token) {
+    reply.code(401).send({ error: "ingest token required" });
+    return;
+  }
+  const body = IngestRequestSchema.safeParse(req.body);
+  if (!body.success) {
+    reply
+      .code(400)
+      .send({ error: body.error.issues[0]?.message ?? "invalid ingest" });
+    return;
+  }
+  const { rows: memberRows } = await pool.query(
+    "select org_id from members where id = $1",
+    [body.data.memberId],
+  );
+  const orgId: string | undefined = memberRows[0]?.org_id;
+  if (!orgId) {
+    reply.code(404).send({ error: "member not found" });
+    return;
+  }
+  try {
+    // The sink writes each trace row as the run emits it and remembers the
+    // root trace id so the response can point at it. Connections are
+    // checked out per phase inside ingestDischarge — nothing is held
+    // across the model call, so the sink can share the pool safely.
+    const sink = pgTraceSink(pool, orgId);
+    let traceId: string | null = null;
+    const capturingSink = {
+      write: async (record: Parameters<typeof sink.write>[0]) => {
+        traceId = traceId ?? record.traceId;
+        await sink.write(record);
+      },
+    };
+    const result = await ingestDischarge(pool, body.data, (input) =>
+      runDischargeSummary(input, { sink: capturingSink }),
+    );
+    return IngestResponseSchema.parse({ ...result, traceId });
+  } catch (err) {
+    if (err instanceof IngestError) {
+      reply.code(err.statusCode).send({ error: err.message });
+      return;
+    }
+    throw err;
+  }
+});
 
 const port = Number(process.env.PORT ?? 3001);
 // Dev binds loopback; the deploy platform sets HOST=0.0.0.0 explicitly.

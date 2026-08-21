@@ -28,6 +28,7 @@ export {
   DEFAULT_MODEL,
   type DischargeInput,
   type DischargeRunResult,
+  type ProposalFactPayload,
   ModelOutputSchema,
   type ModelOutput,
   type RunOptions,

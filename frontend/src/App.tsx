@@ -206,6 +206,18 @@ function ReviewPanel({
           </p>
         )}
 
+        {proposal.sourceDocument && (
+          <div className="mt-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">
+              Source document (verbatim, untrusted) ·{" "}
+              {proposal.sourceDocument.source}
+            </h3>
+            <pre className="mt-2 max-h-72 overflow-y-auto whitespace-pre-wrap rounded bg-white p-2 font-sans text-xs leading-relaxed text-stone-700">
+              {proposal.sourceDocument.content}
+            </pre>
+          </div>
+        )}
+
         {factPayload && (
           <div className="mt-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">

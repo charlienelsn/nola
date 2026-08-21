@@ -129,7 +129,10 @@
       },
       {
         "changeType": "task_creation",
-        "summaryMustMention": ["labs", "no order"],
+        "summaryMustMention": [
+          "labs",
+          ["no order", "unspecified", "not ordered", "without an order"]
+        ],
         "autonomyLevelMax": "L1"
       },
       {

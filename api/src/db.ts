@@ -14,7 +14,26 @@ export const DATABASE_URL =
   process.env.DATABASE_URL ??
   "postgresql://postgres:postgres@127.0.0.1:54342/postgres";
 
+// DATE columns (oid 1082) return as the verbatim ISO string, not a JS Date
+// at local midnight: the Brain's identity guard compares member dob to the
+// document's ISO date, and a Date-stringified dob would force a mismatch on
+// every ingest (and a toISOString round-trip shifts a day west of UTC).
+pg.types.setTypeParser(1082, (v) => v);
+
 export const pool = new pg.Pool({ connectionString: DATABASE_URL });
+
+/**
+ * Roll back without masking the original failure: if the connection itself
+ * died, rollback throws too — log it and let the first error surface. The
+ * pool discards broken connections on release.
+ */
+export async function safeRollback(client: pg.PoolClient): Promise<void> {
+  try {
+    await client.query("rollback");
+  } catch (rollbackErr) {
+    console.error("rollback failed (original error follows)", rollbackErr);
+  }
+}
 
 const iso = (v: unknown): string | null => {
   if (v == null) return null;
@@ -99,6 +118,15 @@ export function proposalWithSourceFromRow(r: Row): ProposalWithSource {
             occurredAt: iso(r.occurred_at) ?? "",
             purpose: r.purpose,
             activityDescription: r.activity_description,
+          },
+    sourceDocument:
+      r.document_id == null
+        ? null
+        : {
+            id: r.document_id,
+            docType: r.document_doc_type,
+            source: r.document_source,
+            content: r.document_content,
           },
   };
 }

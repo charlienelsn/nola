@@ -57,7 +57,20 @@ export const ModelOutputSchema = z.object({
 });
 export type ModelOutput = z.infer<typeof ModelOutputSchema>;
 
-/** Structurally identical to the eval harness's RunResultSchema. */
+/**
+ * Fact payload a proposal carries when its subject could be tied to the
+ * extraction deterministically — the shape the decision write-back verifies
+ * on accept. Attached here, never by the model: the model authors summaries;
+ * what a decision writes is derived from the founder-reviewed extraction.
+ */
+export interface ProposalFactPayload {
+  entity: string;
+  attribute: string;
+  value: unknown;
+}
+
+/** Structurally identical to the eval harness's RunResultSchema (which
+ * strips the extra `payload` key when grading). */
 export interface DischargeRunResult {
   identity: { matchesMember: boolean };
   extraction: Extraction | null;
@@ -69,6 +82,7 @@ export interface DischargeRunResult {
     changeType: ChangeType;
     summary: string;
     autonomyLevel: AutonomyLevel;
+    payload: ProposalFactPayload | null;
   }[];
   routing: "prepared" | "judgment";
 }
@@ -81,6 +95,98 @@ function clampAutonomy(changeType: ChangeType): AutonomyLevel {
   return ladder(dischargeSummary.autonomyLevel) <= ladder(ceiling)
     ? dischargeSummary.autonomyLevel
     : ceiling;
+}
+
+/** Lowercase alphanumerics, single spaces — for name-in-summary matching. */
+const plain = (s: string): string =>
+  s
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+/** Fact attribute from a display name: "Insulin glargine" -> "insulin_glargine". */
+const factAttribute = (name: string): string => plain(name).replace(/ /g, "_");
+
+/**
+ * Prefer the attribute the member's chart already uses for this name: a
+ * fresh attribute derived from display-name text drifts on dose forms and
+ * label variants ("Metoprolol succinate ER", "CAP, right lower lobe"),
+ * which would fork the fact chain and orphan the supersede. Exactly one
+ * existing fact whose value.name/label matches wins; otherwise derive.
+ */
+function reconcileAttribute(
+  entity: "medication" | "condition",
+  name: string,
+  currentFacts: MemberContext["currentFacts"],
+): string {
+  const target = plain(name);
+  const matching = currentFacts.filter((f) => {
+    if (f.entity !== entity) return false;
+    const v = f.value as { name?: unknown; label?: unknown } | null;
+    const existing =
+      typeof v?.name === "string"
+        ? v.name
+        : typeof v?.label === "string"
+          ? v.label
+          : null;
+    return existing !== null && plain(existing) === target;
+  });
+  const reconciled = matching.length === 1 ? matching[0] : undefined;
+  return reconciled ? reconciled.attribute : factAttribute(name);
+}
+
+/**
+ * Attach the fact payload a proposal's accept would verify, by tying the
+ * proposal to exactly one extraction entry whose name appears in the
+ * summary. Deterministic and conservative: zero or multiple candidate
+ * matches attach nothing — an unattached fact-shaped proposal is refused at
+ * accept time (422) rather than guessed at, so ambiguity always falls to a
+ * human, never to a heuristic. Residual risk, mitigated by display: a
+ * summary whose true subject is absent from the extraction while naming an
+ * extraction med in passing would attach the wrong fact — the review panel
+ * renders the exact payload an accept verifies, so the mismatch is visible
+ * to the human before anything is written.
+ */
+function attachFactPayload(
+  changeType: ChangeType,
+  summary: string,
+  extraction: Extraction,
+  currentFacts: MemberContext["currentFacts"],
+): ProposalFactPayload | null {
+  const text = ` ${plain(summary)} `;
+  if (changeType === "medication_change") {
+    const named = extraction.medications.filter((m) =>
+      text.includes(` ${plain(m.name)} `),
+    );
+    const med = named.length === 1 ? named[0] : undefined;
+    if (!med) return null;
+    return {
+      entity: "medication",
+      attribute: reconcileAttribute("medication", med.name, currentFacts),
+      // A stop's go-forward regimen is null — status carries the
+      // disposition so the verified fact records "stopped", never an
+      // active med with an unknown dose.
+      value:
+        med.change === "stopped"
+          ? { name: med.name, dose: null, frequency: null, status: "stopped" }
+          : { name: med.name, dose: med.dose, frequency: med.frequency },
+    };
+  }
+  if (changeType === "fact_proposal") {
+    const named = extraction.newDiagnoses.filter((d) =>
+      text.includes(` ${plain(d.label)} `),
+    );
+    const dx = named.length === 1 ? named[0] : undefined;
+    if (!dx) return null;
+    return {
+      entity: "condition",
+      attribute: reconcileAttribute("condition", dx.label, currentFacts),
+      value: { label: dx.label, status: dx.status },
+    };
+  }
+  return null;
 }
 
 const MISROUTE_TASK =
@@ -110,9 +216,21 @@ export function finalizeDischargeRun(
     output.identity.documentDob !== member.dob;
   const matches = output.identity.matchesMember && !dobMismatch;
 
-  const withLevel = (p: { changeType: ChangeType; summary: string }) => ({
+  const withLevel = (
+    p: { changeType: ChangeType; summary: string },
+    extraction: Extraction | null,
+  ) => ({
     ...p,
     autonomyLevel: clampAutonomy(p.changeType),
+    payload:
+      extraction === null
+        ? null
+        : attachFactPayload(
+            p.changeType,
+            p.summary,
+            extraction,
+            member.currentFacts,
+          ),
   });
 
   if (!matches) {
@@ -131,7 +249,7 @@ export function finalizeDischargeRun(
       identity: { matchesMember: false },
       extraction: null,
       contradictions: [],
-      proposals: escalated.map(withLevel),
+      proposals: escalated.map((p) => withLevel(p, null)),
       routing: "judgment",
     };
   }
@@ -144,7 +262,7 @@ export function finalizeDischargeRun(
       identity: { matchesMember: true },
       extraction: null,
       contradictions: output.contradictions,
-      proposals: output.proposals.map(withLevel),
+      proposals: output.proposals.map((p) => withLevel(p, null)),
       routing: "judgment",
     };
   }
@@ -161,7 +279,7 @@ export function finalizeDischargeRun(
     identity: { matchesMember: true },
     extraction,
     contradictions: output.contradictions,
-    proposals: output.proposals.map(withLevel),
+    proposals: output.proposals.map((p) => withLevel(p, extraction)),
     routing: uncitable ? "judgment" : routeExtraction(extraction, issues),
   };
 }

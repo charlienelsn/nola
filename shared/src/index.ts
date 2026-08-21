@@ -101,6 +101,99 @@ export const MemberStateSchema = z.object({
 });
 export type MemberState = z.infer<typeof MemberStateSchema>;
 
+// ---------- Proposals and review decisions (plan section 9, API contract v1) ----------
+export const PROPOSAL_STATUSES = [
+  "pending",
+  "approved",
+  "rejected",
+  "expired",
+] as const;
+export type ProposalStatus = (typeof PROPOSAL_STATUSES)[number];
+
+export const ProposalSchema = z.object({
+  id: z.string().uuid(),
+  orgId: z.string().uuid(),
+  memberId: z.string().uuid(),
+  workflow: z.string(),
+  /** Workflow-defined change type (e.g. task_creation); free text at this boundary. */
+  changeType: z.string(),
+  status: z.enum(PROPOSAL_STATUSES),
+  summary: z.string(),
+  payload: z.unknown(),
+  sourceEventId: z.string().uuid().nullable(),
+  autonomyLevel: z.enum(AUTONOMY_LEVELS),
+  reviewedBy: z.string().nullable(),
+  reviewedAt: z.string().nullable(),
+  createdAt: z.string(),
+});
+export type Proposal = z.infer<typeof ProposalSchema>;
+
+/**
+ * GET /proposals — each proposal beside its source evidence (requirement 6:
+ * every proposal cites the event that produced it) and the member it serves,
+ * so the review screen shows source beside proposal without a second fetch.
+ */
+export const ProposalWithSourceSchema = ProposalSchema.extend({
+  member: z.object({
+    id: z.string().uuid(),
+    chosenName: z.string(),
+    primaryLanguage: z.string(),
+    interpreterNeeded: z.boolean(),
+  }),
+  sourceEvent: z
+    .object({
+      id: z.string().uuid(),
+      eventType: z.string(),
+      actor: z.string(),
+      occurredAt: z.string(),
+      purpose: z.string(),
+      activityDescription: z.string(),
+    })
+    .nullable(),
+});
+export type ProposalWithSource = z.infer<typeof ProposalWithSourceSchema>;
+
+/**
+ * POST /proposals/:id/decision — the human decision written back.
+ * Requirement 9 makes the decision itself a first-class event: actor,
+ * measured duration, and a non-blank description of the review work are part
+ * of the request, not an afterthought.
+ */
+export const ProposalDecisionRequestSchema = z.object({
+  action: z.enum(["accept", "reject"]),
+  actor: z.string().min(1).max(200),
+  /** Optional reviewer note; lands in the decision event and task detail. */
+  note: z.string().max(2000).optional(),
+  /**
+   * Measured active seconds the reviewer spent; null when not captured.
+   * Bounded: a single review cannot honestly exceed a working day, and an
+   * absurd asserted duration is exactly the requirement-4 "billable minute
+   * for work that did not occur" — reject it rather than record it.
+   */
+  durationSeconds: z.number().int().min(0).max(28_800).nullable(),
+  activityDescription: z
+    .string()
+    .max(4000)
+    .refine((s) => s.trim().length > 0, "activity description cannot be blank"),
+});
+export type ProposalDecisionRequest = z.infer<
+  typeof ProposalDecisionRequestSchema
+>;
+
+export const ProposalDecisionResponseSchema = z.object({
+  proposal: ProposalSchema,
+  decisionEventId: z.string().uuid(),
+  /** Task created by an accepted task_creation proposal. */
+  createdTaskId: z.string().uuid().nullable(),
+  /** Fact verified by an accepted fact-shaped proposal (requirement 7). */
+  verifiedFactId: z.string().uuid().nullable(),
+  /** Prior active verified fact superseded by that verification. */
+  supersededFactId: z.string().uuid().nullable(),
+});
+export type ProposalDecisionResponse = z.infer<
+  typeof ProposalDecisionResponseSchema
+>;
+
 // ---------- WorkflowDefinition (plan section 9) ----------
 // A workflow is a typed module, not a config language.
 export interface WorkflowDefinition<

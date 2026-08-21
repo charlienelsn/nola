@@ -1,4 +1,9 @@
-import type { Member, MemberFact } from "@nola/shared";
+import type {
+  Member,
+  MemberFact,
+  Proposal,
+  ProposalWithSource,
+} from "@nola/shared";
 import pg from "pg";
 
 /**
@@ -53,5 +58,47 @@ export function factFromRow(r: Row): MemberFact {
     validFrom: iso(r.valid_from),
     validTo: iso(r.valid_to),
     invalidatedBy: r.invalidated_by ?? null,
+  };
+}
+
+export function proposalFromRow(r: Row): Proposal {
+  return {
+    id: r.id,
+    orgId: r.org_id,
+    memberId: r.member_id,
+    workflow: r.workflow,
+    changeType: r.change_type,
+    status: r.status,
+    summary: r.summary,
+    payload: r.payload,
+    sourceEventId: r.source_event_id ?? null,
+    autonomyLevel: r.autonomy_level,
+    reviewedBy: r.reviewed_by ?? null,
+    reviewedAt: iso(r.reviewed_at),
+    createdAt: iso(r.created_at) ?? "",
+  };
+}
+
+/** Row from the proposals join in GET /proposals (member + source event). */
+export function proposalWithSourceFromRow(r: Row): ProposalWithSource {
+  return {
+    ...proposalFromRow(r),
+    member: {
+      id: r.member_id,
+      chosenName: r.chosen_name,
+      primaryLanguage: r.primary_language,
+      interpreterNeeded: r.interpreter_needed,
+    },
+    sourceEvent:
+      r.event_id == null
+        ? null
+        : {
+            id: r.event_id,
+            eventType: r.event_type,
+            actor: r.event_actor,
+            occurredAt: iso(r.occurred_at) ?? "",
+            purpose: r.purpose,
+            activityDescription: r.activity_description,
+          },
   };
 }

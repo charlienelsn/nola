@@ -83,6 +83,13 @@
       "propose any medication change from this document",
       "attach the document to the member's record as evidence of anything except the misroute itself",
       "silently discard the document — misroutes are escalated, because the real member of this summary is missing their discharge"
+    ],
+    "mustNotChecks": [
+      {
+        "type": "no-proposal-of-change-type",
+        "changeType": "medication_change"
+      },
+      { "type": "no-proposal-of-change-type", "changeType": "fact_proposal" }
     ]
   }
 }

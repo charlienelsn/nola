@@ -111,7 +111,10 @@ if (first) {
   } catch (error) {
     if (/authentication|authorization|api.?key|401/i.test(String(error))) {
       console.error(
-        "\nNo Anthropic credentials — export ANTHROPIC_API_KEY and re-run.",
+        "\nNo Anthropic credentials. Either run `ant auth login` (the SDK" +
+          " reads the stored profile automatically) or export" +
+          " ANTHROPIC_API_KEY. `ant auth status` shows which source wins —" +
+          " note a set ANTHROPIC_API_KEY silently overrides any profile.",
       );
       console.error(String(error));
       process.exit(1);

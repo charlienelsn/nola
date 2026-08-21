@@ -39,6 +39,26 @@ describe("validateExtraction", () => {
     expect(validateExtraction(baseExtraction())).toEqual([]);
   });
 
+  it("passes a stop with no regimen, flags a stop carrying one", () => {
+    const e = baseExtraction();
+    e.medications.push({
+      name: "Insulin glargine",
+      dose: null,
+      frequency: null,
+      change: "stopped",
+      changeDocumented: false,
+    });
+    expect(validateExtraction(e)).toEqual([]);
+    const carried = e.medications[1];
+    if (!carried) throw new Error("unexpected");
+    carried.dose = "20 units";
+    carried.frequency = "nightly";
+    expect(validateExtraction(e)).toEqual([
+      "stopped medication Insulin glargine carries a regimen " +
+        "(20 units nightly) — record the stop; prior values belong to the verified fact",
+    ]);
+  });
+
   it("flags discharge before admission", () => {
     const e = baseExtraction();
     e.admission.dischargedOn = "2026-07-30";

@@ -81,12 +81,42 @@ export const GoldenCaseSchema = z.object({
     proposals: z.array(
       z.object({
         changeType: z.string(),
-        summaryMustMention: z.array(z.string()).nonempty(),
+        /**
+         * Phrases the proposal summary must carry. Matching is stemmed and
+         * order-free (see score.ts); a string[] entry lists synonymous
+         * alternatives, any one of which satisfies the slot.
+         */
+        summaryMustMention: z
+          .array(
+            z.union([z.string().min(1), z.array(z.string().min(1)).nonempty()]),
+          )
+          .nonempty(),
         autonomyLevelMax: z.enum(AUTONOMY_LEVELS),
       }),
     ),
     routing: z.enum(["prepared", "judgment"]),
     mustNot: z.array(z.string()).nonempty(),
+    /**
+     * Scorer-enforced subset of the mustNot prohibitions — violating one is
+     * critical (README). The prose mustNot list above stays as review
+     * guidance; entries here are the mechanically checkable ones, so the
+     * "automatic critical" promise is real rather than a typed-but-unscored
+     * field (mistakes log).
+     */
+    mustNotChecks: z
+      .array(
+        z.discriminatedUnion("type", [
+          z.object({
+            type: z.literal("no-proposal-of-change-type"),
+            changeType: z.string(),
+          }),
+          z.object({
+            type: z.literal("proposal-summaries-must-not-contain"),
+            text: z.string().min(1),
+          }),
+        ]),
+      )
+      .optional(),
   }),
 });
 export type GoldenCase = z.infer<typeof GoldenCaseSchema>;

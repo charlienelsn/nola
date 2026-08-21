@@ -32,6 +32,28 @@ export function normalize(s: string): string {
     .trim();
 }
 
+/**
+ * Light suffix-stripping stem for mention matching, so morphological
+ * variants compare equal ("schedule"/"scheduling", "missed"/"miss",
+ * "ordering"/"order") without a dependency. Deliberately crude: strip one
+ * common suffix, then collapse a trailing doubled letter ("stopped" ->
+ * "stopp" -> "stop"). Distinct clinical tokens stay apart.
+ */
+export function stem(token: string): string {
+  let t = token;
+  for (const suffix of ["ing", "ed", "es", "s", "e"]) {
+    if (t.length - suffix.length >= 3 && t.endsWith(suffix)) {
+      t = t.slice(0, -suffix.length);
+      break;
+    }
+  }
+  if (t.length >= 4 && t[t.length - 1] === t[t.length - 2]) t = t.slice(0, -1);
+  return t;
+}
+
+const stemmedTokens = (s: string): Set<string> =>
+  new Set(normalize(s).split(" ").filter(Boolean).map(stem));
+
 function tokenOverlap(expected: string, actual: string): number {
   const want = new Set(normalize(expected).split(" ").filter(Boolean));
   if (want.size === 0) return 1;
@@ -200,28 +222,57 @@ export function scoreCase(golden: GoldenCase, result: RunResult): Finding[] {
     // Best-match with consumption: each result follow-up satisfies at most
     // one expected follow-up, and ties go to the highest token overlap so a
     // generic phrase ("follow up") cannot steal a more specific match.
+    // Content matches on description plus owner — the goldens' terse labels
+    // often key on the owner ("PCP visit" vs a result description saying
+    // "primary care" with the PCP named in `with`). A matching dueBy is a
+    // preference, not a gate: the best same-date candidate wins, but a
+    // content match with a different date is a wrong-follow-up-date, not a
+    // missing follow-up.
     const usedFollowUps = new Set<number>();
+    const contentOverlap = (
+      fu: { description: string; with: string | null },
+      f: { description: string; with: string | null },
+    ): number =>
+      Math.max(
+        tokenOverlap(fu.description, f.description),
+        tokenOverlap(
+          `${fu.description} ${fu.with ?? ""}`,
+          `${f.description} ${f.with ?? ""}`,
+        ),
+      );
     for (const fu of want.followUps) {
-      let best = -1;
-      let bestOverlap = 0;
-      got.followUps.forEach((f, i) => {
-        if (usedFollowUps.has(i)) return;
-        if (fu.dueBy !== null && f.dueBy !== fu.dueBy) return;
-        const overlap = tokenOverlap(fu.description, f.description);
-        if (overlap > bestOverlap) {
-          best = i;
-          bestOverlap = overlap;
-        }
-      });
       const threshold = fu.dueBy !== null ? 0.4 : 0.5;
-      const found = best !== -1 && bestOverlap >= threshold ? best : -1;
+      const pick = (sameDueByOnly: boolean): number => {
+        let best = -1;
+        let bestOverlap = 0;
+        got.followUps.forEach((f, i) => {
+          if (usedFollowUps.has(i)) return;
+          if (sameDueByOnly && f.dueBy !== fu.dueBy) return;
+          const overlap = contentOverlap(fu, f);
+          if (overlap > bestOverlap) {
+            best = i;
+            bestOverlap = overlap;
+          }
+        });
+        return best !== -1 && bestOverlap >= threshold ? best : -1;
+      };
+      const sameDate = fu.dueBy !== null ? pick(true) : -1;
+      const found = sameDate !== -1 ? sameDate : pick(false);
       if (found === -1) {
         add("major", "missing-follow-up", `"${fu.description}" not extracted`);
         continue;
       }
       usedFollowUps.add(found);
       const match = got.followUps[found];
-      if (match && match.fullySpecified !== fu.fullySpecified) {
+      if (!match) continue;
+      if (fu.dueBy !== null && match.dueBy !== fu.dueBy) {
+        add(
+          "major",
+          "wrong-follow-up-date",
+          `"${fu.description}": dueBy ${match.dueBy}, expected ${fu.dueBy}`,
+        );
+      }
+      if (match.fullySpecified !== fu.fullySpecified) {
         add(
           "major",
           "wrong-follow-up-specificity",
@@ -271,24 +322,71 @@ export function scoreCase(golden: GoldenCase, result: RunResult): Finding[] {
   }
 
   // ---- proposals: each expected one must exist with all mentions ----
+  // Mentions match on stemmed tokens, order-free, so "schedule" finds
+  // "scheduling" and "missed refill" finds "missed metformin refill"; a
+  // string[] mention lists synonymous alternatives, any one satisfying the
+  // slot. A failed expected proposal then consumes its closest same-type
+  // near-match so one defect cannot double-report as dropped AND extra.
+  const summaryStems = result.proposals.map((r) => stemmedTokens(r.summary));
+  const mentionSatisfied = (
+    stems: Set<string>,
+    m: string | string[],
+  ): boolean =>
+    (Array.isArray(m) ? m : [m]).some((alt) =>
+      normalize(alt)
+        .split(" ")
+        .filter(Boolean)
+        .every((t) => stems.has(stem(t))),
+    );
+  const label = (m: string | string[]): string =>
+    Array.isArray(m) ? m.join("|") : m;
   const matchedResultProposals = new Set<number>();
+  const droppedProposals: (typeof expected.proposals)[number][] = [];
   for (const p of expected.proposals) {
     const idx = result.proposals.findIndex(
       (r, i) =>
         !matchedResultProposals.has(i) &&
         r.changeType === p.changeType &&
         p.summaryMustMention.every((m) =>
-          normalize(r.summary).includes(normalize(m)),
+          mentionSatisfied(summaryStems[i] as Set<string>, m),
         ),
     );
     if (idx === -1) {
+      droppedProposals.push(p);
+    } else {
+      matchedResultProposals.add(idx);
+    }
+  }
+  for (const p of droppedProposals) {
+    let closest = -1;
+    let closestOverlap = 0;
+    result.proposals.forEach((r, i) => {
+      if (matchedResultProposals.has(i) || r.changeType !== p.changeType)
+        return;
+      const overlap = tokenOverlap(
+        p.summaryMustMention.map(label).join(" "),
+        r.summary,
+      );
+      if (overlap > closestOverlap) {
+        closest = i;
+        closestOverlap = overlap;
+      }
+    });
+    const mentions = p.summaryMustMention.map(label).join(", ");
+    if (closest !== -1 && closestOverlap >= 0.5) {
+      matchedResultProposals.add(closest);
       add(
         "major",
         "dropped-proposal",
-        `no ${p.changeType} proposal mentioning: ${p.summaryMustMention.join(", ")}`,
+        `no ${p.changeType} proposal mentioning: ${mentions} ` +
+          `(closest, consumed: "${result.proposals[closest]?.summary}")`,
       );
     } else {
-      matchedResultProposals.add(idx);
+      add(
+        "major",
+        "dropped-proposal",
+        `no ${p.changeType} proposal mentioning: ${mentions}`,
+      );
     }
   }
   result.proposals.forEach((r, i) => {
@@ -300,6 +398,25 @@ export function scoreCase(golden: GoldenCase, result: RunResult): Finding[] {
       );
     }
   });
+
+  // ---- mustNotChecks: typed prohibitions, violating one is critical ----
+  for (const check of expected.mustNotChecks ?? []) {
+    for (const r of result.proposals) {
+      if (
+        check.type === "no-proposal-of-change-type"
+          ? r.changeType === check.changeType
+          : normalize(r.summary).includes(normalize(check.text))
+      ) {
+        add(
+          "critical",
+          "must-not-violation",
+          check.type === "no-proposal-of-change-type"
+            ? `proposal of forbidden type ${check.changeType}: "${r.summary}"`
+            : `proposal text carries forbidden "${check.text}": "${r.summary}"`,
+        );
+      }
+    }
+  }
 
   return findings;
 }
